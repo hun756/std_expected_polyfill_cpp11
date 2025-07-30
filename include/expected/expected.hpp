@@ -980,6 +980,26 @@ public:
             throw bad_expected_access<E>(move(error()));
         return move(this->val);
     }
+
+    constexpr const E& error() const& noexcept
+    {
+        return this->err;
+    }
+
+    constexpr E& error() & noexcept
+    {
+        return this->err;
+    }
+
+    constexpr const E&& error() const&& noexcept
+    {
+        return move(this->err);
+    }
+
+    constexpr E&& error() && noexcept
+    {
+        return move(this->err);
+    }
 };
 
 }  // namespace std
