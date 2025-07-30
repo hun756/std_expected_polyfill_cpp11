@@ -98,13 +98,13 @@ struct expected_storage_base : expected_destructor_base<false>
 
     template <class... Args>
     constexpr expected_storage_base(in_place_t, Args&&... args)
-        : base(true), val(forward<Args>(args)...)
+        : base(true), val(std::forward<Args>(args)...)
     {
     }
 
     template <class... Args>
     constexpr expected_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
-        : base(false), err(forward<Args>(args)...)
+        : base(false), err(std::forward<Args>(args)...)
     {
     }
 
@@ -133,13 +133,13 @@ struct expected_storage_base<T, E, true> : expected_destructor_base<true>
 
     template <class... Args>
     constexpr expected_storage_base(in_place_t, Args&&... args)
-        : base(true), val(forward<Args>(args)...)
+        : base(true), val(std::forward<Args>(args)...)
     {
     }
 
     template <class... Args>
     constexpr expected_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
-        : base(false), err(forward<Args>(args)...)
+        : base(false), err(std::forward<Args>(args)...)
     {
     }
 };
@@ -158,7 +158,7 @@ struct expected_void_storage_base : expected_destructor_base<false>
 
     template <class... Args>
     constexpr expected_void_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
-        : base(false), err(forward<Args>(args)...)
+        : base(false), err(std::forward<Args>(args)...)
     {
     }
 
@@ -185,7 +185,7 @@ struct expected_void_storage_base<E, true> : expected_destructor_base<true>
 
     template <class... Args>
     constexpr expected_void_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
-        : base(false), err(forward<Args>(args)...)
+        : base(false), err(std::forward<Args>(args)...)
     {
     }
 };
@@ -382,7 +382,7 @@ template <class E>
 class bad_expected_access : public bad_expected_access<void>
 {
 public:
-    explicit bad_expected_access(E e) : err(move(e)) {}
+    explicit bad_expected_access(E e) : err(std::move(e)) {}
 
     const E& error() const& noexcept
     {
@@ -396,12 +396,12 @@ public:
 
     const E&& error() const&& noexcept
     {
-        return move(err);
+        return std::move(err);
     }
 
     E&& error() && noexcept
     {
-        return move(err);
+        return std::move(err);
     }
 
 private:
@@ -418,14 +418,14 @@ public:
 
     template <class Err = E>
     constexpr explicit unexpected(Err&& e) noexcept(is_nothrow_constructible<E, Err&&>::value)
-        : val(forward<Err>(e))
+        : val(std::forward<Err>(e))
     {
     }
 
     template <class... Args>
     constexpr explicit unexpected(detail::in_place_t, Args&&... args) noexcept(
         is_nothrow_constructible<E, Args...>::value)
-        : val(forward<Args>(args)...)
+        : val(std::forward<Args>(args)...)
     {
     }
 
@@ -441,12 +441,12 @@ public:
 
     constexpr const E&& error() const&& noexcept
     {
-        return move(val);
+        return std::move(val);
     }
 
     constexpr E&& error() && noexcept
     {
-        return move(val);
+        return std::move(val);
     }
 
     constexpr void swap(unexpected& other) noexcept(detail::is_nothrow_swappable<E>::value)
@@ -481,7 +481,7 @@ constexpr void swap(unexpected<E>& lhs, unexpected<E>& rhs) noexcept(noexcept(lh
 template <class E>
 constexpr unexpected<typename decay<E>::type> make_unexpected(E&& e)
 {
-    return unexpected<typename decay<E>::type>(forward<E>(e));
+    return unexpected<typename decay<E>::type>(std::forward<E>(e));
 }
 
 template <class T, class E>
@@ -586,12 +586,12 @@ public:
     {
         if (rhs.has_value())
         {
-            ::new (static_cast<base*>(this)) base(detail::in_place, move(*rhs));
+            ::new (static_cast<base*>(this)) base(detail::in_place, std::move(*rhs));
         }
         else
         {
             ::new (static_cast<base*>(this))
-                base(detail::in_place_type_t<unexpected_type>{}, move(rhs.error()));
+                base(detail::in_place_type_t<unexpected_type>{}, std::move(rhs.error()));
         }
     }
 
@@ -612,12 +612,12 @@ public:
     {
         if (rhs.has_value())
         {
-            ::new (static_cast<base*>(this)) base(detail::in_place, move(*rhs));
+            ::new (static_cast<base*>(this)) base(detail::in_place, std::move(*rhs));
         }
         else
         {
             ::new (static_cast<base*>(this))
-                base(detail::in_place_type_t<unexpected_type>{}, move(rhs.error()));
+                base(detail::in_place_type_t<unexpected_type>{}, std::move(rhs.error()));
         }
     }
 
@@ -629,7 +629,7 @@ public:
                            && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
                            && is_constructible<T, U&&>::value
                            && is_convertible<U&&, T>::value>::type* = nullptr)
-        : base(detail::in_place, forward<U>(v))
+        : base(detail::in_place, std::forward<U>(v))
     {
     }
 
@@ -641,7 +641,7 @@ public:
                            && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
                            && is_constructible<T, U&&>::value
                            && !is_convertible<U&&, T>::value>::type* = nullptr)
-        : base(detail::in_place, forward<U>(v))
+        : base(detail::in_place, std::forward<U>(v))
     {
     }
 
@@ -666,7 +666,7 @@ public:
     constexpr expected(unexpected<G>&& e,
                        typename enable_if<is_constructible<E, G&&>::value
                                           && is_convertible<G&&, E>::value>::type* = nullptr)
-        : base(detail::in_place_type_t<unexpected_type>{}, move(e.error()))
+        : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
     {
     }
 
@@ -675,14 +675,14 @@ public:
         unexpected<G>&& e,
         typename enable_if<is_constructible<E, G&&>::value
                            && !is_convertible<G&&, E>::value>::type* = nullptr)
-        : base(detail::in_place_type_t<unexpected_type>{}, move(e.error()))
+        : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
     {
     }
 
     template <class... Args>
     constexpr explicit expected(detail::in_place_t, Args&&... args) noexcept(
         is_nothrow_constructible<T, Args...>::value)
-        : base(detail::in_place, forward<Args>(args)...)
+        : base(detail::in_place, std::forward<Args>(args)...)
     {
     }
 
@@ -691,14 +691,14 @@ public:
         detail::in_place_t,
         initializer_list<U> il,
         Args&&... args) noexcept(is_nothrow_constructible<T, initializer_list<U>&, Args...>::value)
-        : base(detail::in_place, il, forward<Args>(args)...)
+        : base(detail::in_place, il, std::forward<Args>(args)...)
     {
     }
 
     template <class... Args>
     constexpr explicit expected(detail::in_place_type_t<unexpected_type>, Args&&... args) noexcept(
         is_nothrow_constructible<E, Args...>::value)
-        : base(detail::in_place_type_t<unexpected_type>{}, forward<Args>(args)...)
+        : base(detail::in_place_type_t<unexpected_type>{}, std::forward<Args>(args)...)
     {
     }
 
@@ -707,7 +707,7 @@ public:
         detail::in_place_type_t<unexpected_type>,
         initializer_list<U> il,
         Args&&... args) noexcept(is_nothrow_constructible<E, initializer_list<U>&, Args...>::value)
-        : base(detail::in_place_type_t<unexpected_type>{}, il, forward<Args>(args)...)
+        : base(detail::in_place_type_t<unexpected_type>{}, il, std::forward<Args>(args)...)
     {
     }
 
@@ -726,35 +726,35 @@ public:
     {
         if (has_value())
         {
-            this->val = forward<U>(v);
+            this->val = std::forward<U>(v);
         }
         else
         {
             if (is_nothrow_constructible<T, U>::value)
             {
                 this->err.~E();
-                ::new (static_cast<void*>(addressof(this->val))) T(forward<U>(v));
+                ::new (static_cast<void*>(std::addressof(this->val))) T(std::forward<U>(v));
                 this->has_val = true;
             }
             else if (is_nothrow_move_constructible<T>::value)
             {
-                T tmp(forward<U>(v));
+                T tmp(std::forward<U>(v));
                 this->err.~E();
-                ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                ::new (static_cast<void*>(std::addressof(this->val))) T(std::move(tmp));
                 this->has_val = true;
             }
             else
             {
-                E tmp(move(this->err));
+                E tmp(std::move(this->err));
                 this->err.~E();
                 try
                 {
-                    ::new (static_cast<void*>(addressof(this->val))) T(forward<U>(v));
+                    ::new (static_cast<void*>(std::addressof(this->val))) T(std::forward<U>(v));
                     this->has_val = true;
                 }
                 catch (...)
                 {
-                    ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(tmp));
                     throw;
                 }
             }
@@ -775,28 +775,28 @@ public:
             if (is_nothrow_constructible<E, const G&>::value)
             {
                 this->val.~T();
-                ::new (static_cast<void*>(addressof(this->err))) E(e.error());
+                ::new (static_cast<void*>(std::addressof(this->err))) E(e.error());
                 this->has_val = false;
             }
             else if (is_nothrow_move_constructible<E>::value)
             {
                 E tmp(e.error());
                 this->val.~T();
-                ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(tmp));
                 this->has_val = false;
             }
             else
             {
-                T tmp(move(this->val));
+                T tmp(std::move(this->val));
                 this->val.~T();
                 try
                 {
-                    ::new (static_cast<void*>(addressof(this->err))) E(e.error());
+                    ::new (static_cast<void*>(std::addressof(this->err))) E(e.error());
                     this->has_val = false;
                 }
                 catch (...)
                 {
-                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(this->val))) T(std::move(tmp));
                     throw;
                 }
             }
@@ -822,35 +822,35 @@ public:
             if (is_nothrow_constructible<E, G&&>::value)
             {
                 this->val.~T();
-                ::new (static_cast<void*>(addressof(this->err))) E(move(e.error()));
+                ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(e.error()));
                 this->has_val = false;
             }
             else if (is_nothrow_move_constructible<E>::value)
             {
-                E tmp(move(e.error()));
+                E tmp(std::move(e.error()));
                 this->val.~T();
-                ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(tmp));
                 this->has_val = false;
             }
             else
             {
-                T tmp(move(this->val));
+                T tmp(std::move(this->val));
                 this->val.~T();
                 try
                 {
-                    ::new (static_cast<void*>(addressof(this->err))) E(move(e.error()));
+                    ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(e.error()));
                     this->has_val = false;
                 }
                 catch (...)
                 {
-                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(this->val))) T(std::move(tmp));
                     throw;
                 }
             }
         }
         else
         {
-            this->err = move(e.error());
+            this->err = std::move(e.error());
         }
         return *this;
     }
@@ -874,35 +874,35 @@ public:
         {
             if (is_nothrow_move_constructible<E>::value)
             {
-                E tmp(move(rhs.err));
+                E tmp(std::move(rhs.err));
                 rhs.err.~E();
                 try
                 {
-                    ::new (static_cast<void*>(addressof(rhs.val))) T(move(this->val));
+                    ::new (static_cast<void*>(std::addressof(rhs.val))) T(std::move(this->val));
                     this->val.~T();
-                    ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(tmp));
                     swap(this->has_val, rhs.has_val);
                 }
                 catch (...)
                 {
-                    ::new (static_cast<void*>(addressof(rhs.err))) E(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(rhs.err))) E(std::move(tmp));
                     throw;
                 }
             }
             else
             {
-                T tmp(move(this->val));
+                T tmp(std::move(this->val));
                 this->val.~T();
                 try
                 {
-                    ::new (static_cast<void*>(addressof(this->err))) E(move(rhs.err));
+                    ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(rhs.err));
                     rhs.err.~E();
-                    ::new (static_cast<void*>(addressof(rhs.val))) T(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(rhs.val))) T(std::move(tmp));
                     swap(this->has_val, rhs.has_val);
                 }
                 catch (...)
                 {
-                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    ::new (static_cast<void*>(std::addressof(this->val))) T(std::move(tmp));
                     throw;
                 }
             }
@@ -915,12 +915,12 @@ public:
 
     constexpr const T* operator->() const noexcept
     {
-        return addressof(this->val);
+        return std::addressof(this->val);
     }
 
     constexpr T* operator->() noexcept
     {
-        return addressof(this->val);
+        return std::addressof(this->val);
     }
 
     constexpr const T& operator*() const& noexcept
@@ -935,12 +935,12 @@ public:
 
     constexpr const T&& operator*() const&& noexcept
     {
-        return move(this->val);
+        return std::move(this->val);
     }
 
     constexpr T&& operator*() && noexcept
     {
-        return move(this->val);
+        return std::move(this->val);
     }
 
     constexpr explicit operator bool() const noexcept
@@ -970,15 +970,15 @@ public:
     constexpr const T&& value() const&&
     {
         if (!has_value())
-            throw bad_expected_access<E>(move(error()));
-        return move(this->val);
+            throw bad_expected_access<E>(std::move(error()));
+        return std::move(this->val);
     }
 
     constexpr T&& value() &&
     {
         if (!has_value())
-            throw bad_expected_access<E>(move(error()));
-        return move(this->val);
+            throw bad_expected_access<E>(std::move(error()));
+        return std::move(this->val);
     }
 
     constexpr const E& error() const& noexcept
@@ -993,12 +993,12 @@ public:
 
     constexpr const E&& error() const&& noexcept
     {
-        return move(this->err);
+        return std::move(this->err);
     }
 
     constexpr E&& error() && noexcept
     {
-        return move(this->err);
+        return std::move(this->err);
     }
 };
 
