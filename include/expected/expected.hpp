@@ -1,7 +1,9 @@
 #ifndef LIB_STD_EXPECTED_POLYFILL_CPP11_HPP_ztk3ue
 #define LIB_STD_EXPECTED_POLYFILL_CPP11_HPP_ztk3ue
 
+#include <exception>
 #include <type_traits>
+#include <utility>
 
 namespace std
 {
@@ -55,6 +57,7 @@ struct in_place_t
 {
     explicit in_place_t() = default;
 };
+
 constexpr in_place_t in_place{};
 
 template <class T>
@@ -63,8 +66,139 @@ struct in_place_type_t
     explicit in_place_type_t() = default;
 };
 
+template <class T>
+struct is_nothrow_swappable
+{
+    template <class U>
+    static auto test(int) -> decltype(swap(declval<U&>(), declval<U&>()), true_type{});
+    template <class>
+    static false_type test(...);
+
+    static constexpr bool value = noexcept(swap(declval<T&>(), declval<T&>()));
+};
 
 }  // namespace detail
+
+template <class E>
+class bad_expected_access;
+
+template <>
+class bad_expected_access<void> : public exception
+{
+public:
+    bad_expected_access() = default;
+
+    const char* what() const noexcept override
+    {
+        return "bad expected access";
+    }
+};
+
+template <class E>
+class bad_expected_access : public bad_expected_access<void>
+{
+public:
+    explicit bad_expected_access(E e) : err(move(e)) {}
+
+    const E& error() const& noexcept
+    {
+        return err;
+    }
+
+    E& error() & noexcept
+    {
+        return err;
+    }
+
+    const E&& error() const&& noexcept
+    {
+        return move(err);
+    }
+
+    E&& error() && noexcept
+    {
+        return move(err);
+    }
+
+private:
+    E err;
+};
+
+template <class E>
+class unexpected
+{
+public:
+    static_assert(!is_same<E, void>::value, "E must not be void");
+    static_assert(!is_reference<E>::value, "E must not be a reference");
+    static_assert(!detail::is_unexpected<E>::value, "E must not be unexpected (no nesting)");
+
+    template <class Err = E>
+    constexpr explicit unexpected(Err&& e) noexcept(is_nothrow_constructible<E, Err&&>::value)
+        : val(forward<Err>(e))
+    {
+    }
+
+    template <class... Args>
+    constexpr explicit unexpected(detail::in_place_t, Args&&... args) noexcept(
+        is_nothrow_constructible<E, Args...>::value)
+        : val(forward<Args>(args)...)
+    {
+    }
+
+    constexpr const E& error() const& noexcept
+    {
+        return val;
+    }
+
+    constexpr E& error() & noexcept
+    {
+        return val;
+    }
+
+    constexpr const E&& error() const&& noexcept
+    {
+        return move(val);
+    }
+
+    constexpr E&& error() && noexcept
+    {
+        return move(val);
+    }
+
+    constexpr void swap(unexpected& other) noexcept(detail::is_nothrow_swappable<E>::value)
+    {
+        using std::swap;
+        swap(val, other.val);
+    }
+
+private:
+    E val;
+};
+
+
+template <class E1, class E2>
+constexpr bool operator==(const unexpected<E1>& lhs, const unexpected<E2>& rhs)
+{
+    return lhs.error() == rhs.error();
+}
+
+template <class E1, class E2>
+constexpr bool operator!=(const unexpected<E1>& lhs, const unexpected<E2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class E>
+constexpr void swap(unexpected<E>& lhs, unexpected<E>& rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+    lhs.swap(rhs);
+}
+
+template <class E>
+constexpr unexpected<typename decay<E>::type> make_unexpected(E&& e)
+{
+    return unexpected<typename decay<E>::type>(forward<E>(e));
+}
 
 }  // namespace std
 
