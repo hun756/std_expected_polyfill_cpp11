@@ -66,6 +66,130 @@ struct in_place_type_t
     explicit in_place_type_t() = default;
 };
 
+template <bool TriviallyDestructible>
+struct expected_destructor_base
+{
+    bool has_val;
+    constexpr expected_destructor_base() : has_val(true) {}
+    constexpr expected_destructor_base(bool b) : has_val(b) {}
+};
+
+template <>
+struct expected_destructor_base<false>
+{
+    bool has_val;
+    constexpr expected_destructor_base() : has_val(true) {}
+    constexpr expected_destructor_base(bool b) : has_val(b) {}
+
+    ~expected_destructor_base() {}
+};
+
+template <class T,
+          class E,
+          bool = is_trivially_destructible<T>::value && is_trivially_destructible<E>::value>
+struct expected_storage_base : expected_destructor_base<false>
+{
+    using base = expected_destructor_base<false>;
+    union
+    {
+        T val;
+        E err;
+    };
+
+    template <class... Args>
+    constexpr expected_storage_base(in_place_t, Args&&... args)
+        : base(true), val(forward<Args>(args)...)
+    {
+    }
+
+    template <class... Args>
+    constexpr expected_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
+        : base(false), err(forward<Args>(args)...)
+    {
+    }
+
+    ~expected_storage_base()
+    {
+        if (this->has_val)
+        {
+            val.~T();
+        }
+        else
+        {
+            err.~E();
+        }
+    }
+};
+
+template <class T, class E>
+struct expected_storage_base<T, E, true> : expected_destructor_base<true>
+{
+    using base = expected_destructor_base<true>;
+    union
+    {
+        T val;
+        E err;
+    };
+
+    template <class... Args>
+    constexpr expected_storage_base(in_place_t, Args&&... args)
+        : base(true), val(forward<Args>(args)...)
+    {
+    }
+
+    template <class... Args>
+    constexpr expected_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
+        : base(false), err(forward<Args>(args)...)
+    {
+    }
+};
+
+template <class E, bool = is_trivially_destructible<E>::value>
+struct expected_void_storage_base : expected_destructor_base<false>
+{
+    using base = expected_destructor_base<false>;
+    union
+    {
+        char dummy;
+        E err;
+    };
+
+    constexpr expected_void_storage_base() : base(true), dummy() {}
+
+    template <class... Args>
+    constexpr expected_void_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
+        : base(false), err(forward<Args>(args)...)
+    {
+    }
+
+    ~expected_void_storage_base()
+    {
+        if (!this->has_val)
+        {
+            err.~E();
+        }
+    }
+};
+
+template <class E>
+struct expected_void_storage_base<E, true> : expected_destructor_base<true>
+{
+    using base = expected_destructor_base<true>;
+    union
+    {
+        char dummy;
+        E err;
+    };
+
+    constexpr expected_void_storage_base() : base(true), dummy() {}
+
+    template <class... Args>
+    constexpr expected_void_storage_base(in_place_type_t<unexpected<E>>, Args&&... args)
+        : base(false), err(forward<Args>(args)...)
+    {
+    }
+};
+
 template <class T>
 struct is_nothrow_swappable
 {
