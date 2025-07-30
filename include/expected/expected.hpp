@@ -356,6 +356,11 @@ struct is_nothrow_swappable
     static constexpr bool value = noexcept(swap(declval<T&>(), declval<T&>()));
 };
 
+template <class T, class U>
+struct is_same_decayed : is_same<typename decay<T>::type, typename decay<U>::type>
+{
+};
+
 }  // namespace detail
 
 template <class E>
@@ -478,6 +483,237 @@ constexpr unexpected<typename decay<E>::type> make_unexpected(E&& e)
 {
     return unexpected<typename decay<E>::type>(forward<E>(e));
 }
+
+template <class T, class E>
+class expected : private detail::expected_base<T, E>
+{
+    static_assert(!is_reference<T>::value, "T must not be a reference");
+    static_assert(!is_function<T>::value, "T must not be a function");
+    static_assert(!is_same<typename detail::remove_cvref<T>::type, detail::in_place_t>::value,
+                  "T must not be in_place_t");
+    static_assert(!detail::is_unexpected<typename detail::remove_cvref<T>::type>::value,
+                  "T must not be unexpected");
+    static_assert(!is_reference<E>::value, "E must not be a reference");
+    static_assert(!is_function<E>::value, "E must not be a function");
+
+    using base = detail::expected_base<T, E>;
+
+public:
+    using value_type = T;
+    using error_type = E;
+    using unexpected_type = unexpected<E>;
+
+    template <class U>
+    using rebind = expected<U, error_type>;
+
+    constexpr expected() noexcept(is_nothrow_default_constructible<T>::value)
+        : base(detail::in_place)
+    {
+    }
+
+    constexpr expected(const expected&) = default;
+    constexpr expected(expected&&) = default;
+
+
+    template <class U, class G>
+    constexpr expected(
+        const expected<U, G>& rhs,
+        typename enable_if<
+            is_constructible<T, const U&>::value && is_constructible<E, const G&>::value
+            && !is_constructible<T, expected<U, G>&>::value
+            && !is_constructible<T, expected<U, G>>::value
+            && !is_constructible<T, const expected<U, G>&>::value
+            && !is_constructible<T, const expected<U, G>>::value
+            && !is_convertible<expected<U, G>&, T>::value
+            && !is_convertible<expected<U, G>, T>::value
+            && !is_convertible<const expected<U, G>&, T>::value
+            && !is_convertible<const expected<U, G>, T>::value
+            && (is_convertible<const U&, T>::value && is_convertible<const G&, E>::value)>::type* =
+            nullptr)
+    {
+        if (rhs.has_value())
+        {
+            ::new (static_cast<base*>(this)) base(detail::in_place, *rhs);
+        }
+        else
+        {
+            ::new (static_cast<base*>(this))
+                base(detail::in_place_type_t<unexpected_type>{}, rhs.error());
+        }
+    }
+
+    template <class U, class G>
+    constexpr explicit expected(
+        const expected<U, G>& rhs,
+        typename enable_if<is_constructible<T, const U&>::value
+                           && is_constructible<E, const G&>::value
+                           && !is_constructible<T, expected<U, G>&>::value
+                           && !is_constructible<T, expected<U, G>>::value
+                           && !is_constructible<T, const expected<U, G>&>::value
+                           && !is_constructible<T, const expected<U, G>>::value
+                           && !is_convertible<expected<U, G>&, T>::value
+                           && !is_convertible<expected<U, G>, T>::value
+                           && !is_convertible<const expected<U, G>&, T>::value
+                           && !is_convertible<const expected<U, G>, T>::value
+                           && (!is_convertible<const U&, T>::value
+                               || !is_convertible<const G&, E>::value)>::type* = nullptr)
+    {
+        if (rhs.has_value())
+        {
+            ::new (static_cast<base*>(this)) base(detail::in_place, *rhs);
+        }
+        else
+        {
+            ::new (static_cast<base*>(this))
+                base(detail::in_place_type_t<unexpected_type>{}, rhs.error());
+        }
+    }
+
+    template <class U, class G>
+    constexpr expected(
+        expected<U, G>&& rhs,
+        typename enable_if<is_constructible<T, U&&>::value && is_constructible<E, G&&>::value
+                           && !is_constructible<T, expected<U, G>&>::value
+                           && !is_constructible<T, expected<U, G>>::value
+                           && !is_constructible<T, const expected<U, G>&>::value
+                           && !is_constructible<T, const expected<U, G>>::value
+                           && !is_convertible<expected<U, G>&, T>::value
+                           && !is_convertible<expected<U, G>, T>::value
+                           && !is_convertible<const expected<U, G>&, T>::value
+                           && !is_convertible<const expected<U, G>, T>::value
+                           && (is_convertible<U&&, T>::value
+                               && is_convertible<G&&, E>::value)>::type* = nullptr)
+    {
+        if (rhs.has_value())
+        {
+            ::new (static_cast<base*>(this)) base(detail::in_place, move(*rhs));
+        }
+        else
+        {
+            ::new (static_cast<base*>(this))
+                base(detail::in_place_type_t<unexpected_type>{}, move(rhs.error()));
+        }
+    }
+
+    template <class U, class G>
+    constexpr explicit expected(
+        expected<U, G>&& rhs,
+        typename enable_if<is_constructible<T, U&&>::value && is_constructible<E, G&&>::value
+                           && !is_constructible<T, expected<U, G>&>::value
+                           && !is_constructible<T, expected<U, G>>::value
+                           && !is_constructible<T, const expected<U, G>&>::value
+                           && !is_constructible<T, const expected<U, G>>::value
+                           && !is_convertible<expected<U, G>&, T>::value
+                           && !is_convertible<expected<U, G>, T>::value
+                           && !is_convertible<const expected<U, G>&, T>::value
+                           && !is_convertible<const expected<U, G>, T>::value
+                           && (!is_convertible<U&&, T>::value
+                               || !is_convertible<G&&, E>::value)>::type* = nullptr)
+    {
+        if (rhs.has_value())
+        {
+            ::new (static_cast<base*>(this)) base(detail::in_place, move(*rhs));
+        }
+        else
+        {
+            ::new (static_cast<base*>(this))
+                base(detail::in_place_type_t<unexpected_type>{}, move(rhs.error()));
+        }
+    }
+
+    template <class U = T>
+    constexpr expected(
+        U&& v,
+        typename enable_if<!detail::is_same_decayed<U, expected>::value
+                           && !detail::is_same_decayed<U, detail::in_place_t>::value
+                           && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
+                           && is_constructible<T, U&&>::value
+                           && is_convertible<U&&, T>::value>::type* = nullptr)
+        : base(detail::in_place, forward<U>(v))
+    {
+    }
+
+    template <class U = T>
+    constexpr explicit expected(
+        U&& v,
+        typename enable_if<!detail::is_same_decayed<U, expected>::value
+                           && !detail::is_same_decayed<U, detail::in_place_t>::value
+                           && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
+                           && is_constructible<T, U&&>::value
+                           && !is_convertible<U&&, T>::value>::type* = nullptr)
+        : base(detail::in_place, forward<U>(v))
+    {
+    }
+
+    template <class G = E>
+    constexpr expected(const unexpected<G>& e,
+                       typename enable_if<is_constructible<E, const G&>::value
+                                          && is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, e.error())
+    {
+    }
+
+    template <class G = E>
+    constexpr explicit expected(
+        const unexpected<G>& e,
+        typename enable_if<is_constructible<E, const G&>::value
+                           && !is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, e.error())
+    {
+    }
+
+    template <class G = E>
+    constexpr expected(unexpected<G>&& e,
+                       typename enable_if<is_constructible<E, G&&>::value
+                                          && is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, move(e.error()))
+    {
+    }
+
+    template <class G = E>
+    constexpr explicit expected(
+        unexpected<G>&& e,
+        typename enable_if<is_constructible<E, G&&>::value
+                           && !is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, move(e.error()))
+    {
+    }
+
+    template <class... Args>
+    constexpr explicit expected(detail::in_place_t, Args&&... args) noexcept(
+        is_nothrow_constructible<T, Args...>::value)
+        : base(detail::in_place, forward<Args>(args)...)
+    {
+    }
+
+    template <class U, class... Args>
+    constexpr explicit expected(
+        detail::in_place_t,
+        initializer_list<U> il,
+        Args&&... args) noexcept(is_nothrow_constructible<T, initializer_list<U>&, Args...>::value)
+        : base(detail::in_place, il, forward<Args>(args)...)
+    {
+    }
+
+    template <class... Args>
+    constexpr explicit expected(detail::in_place_type_t<unexpected_type>, Args&&... args) noexcept(
+        is_nothrow_constructible<E, Args...>::value)
+        : base(detail::in_place_type_t<unexpected_type>{}, forward<Args>(args)...)
+    {
+    }
+
+    template <class U, class... Args>
+    constexpr explicit expected(
+        detail::in_place_type_t<unexpected_type>,
+        initializer_list<U> il,
+        Args&&... args) noexcept(is_nothrow_constructible<E, initializer_list<U>&, Args...>::value)
+        : base(detail::in_place_type_t<unexpected_type>{}, il, forward<Args>(args)...)
+    {
+    }
+
+    expected& operator=(const expected&) = default;
+    expected& operator=(expected&&) = default;
+};
 
 }  // namespace std
 
