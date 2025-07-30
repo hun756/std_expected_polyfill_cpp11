@@ -913,14 +913,72 @@ public:
         }
     }
 
-    constexpr explicit operator bool() const noexcept { return this->has_val; }
+    constexpr const T* operator->() const noexcept
+    {
+        return addressof(this->val);
+    }
 
-    constexpr bool has_value() const noexcept { return this->has_val; }
+    constexpr T* operator->() noexcept
+    {
+        return addressof(this->val);
+    }
 
-    constexpr void value() const
+    constexpr const T& operator*() const& noexcept
+    {
+        return this->val;
+    }
+
+    constexpr T& operator*() & noexcept
+    {
+        return this->val;
+    }
+
+    constexpr const T&& operator*() const&& noexcept
+    {
+        return move(this->val);
+    }
+
+    constexpr T&& operator*() && noexcept
+    {
+        return move(this->val);
+    }
+
+    constexpr explicit operator bool() const noexcept
+    {
+        return this->has_val;
+    }
+
+    constexpr bool has_value() const noexcept
+    {
+        return this->has_val;
+    }
+
+    constexpr const T& value() const&
     {
         if (!has_value())
             throw bad_expected_access<E>(error());
+        return this->val;
+    }
+
+    constexpr T& value() &
+    {
+        if (!has_value())
+            throw bad_expected_access<E>(error());
+        return this->val;
+    }
+
+    constexpr const T&& value() const&&
+    {
+        if (!has_value())
+            throw bad_expected_access<E>(move(error()));
+        return move(this->val);
+    }
+
+    constexpr T&& value() &&
+    {
+        if (!has_value())
+            throw bad_expected_access<E>(move(error()));
+        return move(this->val);
     }
 };
 
