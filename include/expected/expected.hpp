@@ -854,6 +854,74 @@ public:
         }
         return *this;
     }
+
+    constexpr void swap(expected& rhs) noexcept(is_nothrow_move_constructible<T>::value
+                                                && detail::is_nothrow_swappable<T>::value
+                                                && is_nothrow_move_constructible<E>::value
+                                                && detail::is_nothrow_swappable<E>::value)
+    {
+        if (has_value() && rhs.has_value())
+        {
+            using std::swap;
+            swap(this->val, rhs.val);
+        }
+        else if (!has_value() && !rhs.has_value())
+        {
+            using std::swap;
+            swap(this->err, rhs.err);
+        }
+        else if (has_value() && !rhs.has_value())
+        {
+            if (is_nothrow_move_constructible<E>::value)
+            {
+                E tmp(move(rhs.err));
+                rhs.err.~E();
+                try
+                {
+                    ::new (static_cast<void*>(addressof(rhs.val))) T(move(this->val));
+                    this->val.~T();
+                    ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                    swap(this->has_val, rhs.has_val);
+                }
+                catch (...)
+                {
+                    ::new (static_cast<void*>(addressof(rhs.err))) E(move(tmp));
+                    throw;
+                }
+            }
+            else
+            {
+                T tmp(move(this->val));
+                this->val.~T();
+                try
+                {
+                    ::new (static_cast<void*>(addressof(this->err))) E(move(rhs.err));
+                    rhs.err.~E();
+                    ::new (static_cast<void*>(addressof(rhs.val))) T(move(tmp));
+                    swap(this->has_val, rhs.has_val);
+                }
+                catch (...)
+                {
+                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    throw;
+                }
+            }
+        }
+        else
+        {
+            rhs.swap(*this);
+        }
+    }
+
+    constexpr explicit operator bool() const noexcept { return this->has_val; }
+
+    constexpr bool has_value() const noexcept { return this->has_val; }
+
+    constexpr void value() const
+    {
+        if (!has_value())
+            throw bad_expected_access<E>(error());
+    }
 };
 
 }  // namespace std
