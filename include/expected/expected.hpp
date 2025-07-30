@@ -713,6 +713,147 @@ public:
 
     expected& operator=(const expected&) = default;
     expected& operator=(expected&&) = default;
+
+    template <class U = T>
+    typename enable_if<!detail::is_same_decayed<U, expected>::value
+                           && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
+                           && is_constructible<T, U>::value && is_assignable<T&, U>::value
+                           && (is_nothrow_constructible<T, U>::value
+                               || is_nothrow_move_constructible<T>::value
+                               || is_nothrow_move_constructible<E>::value),
+                       expected&>::type
+    operator=(U&& v)
+    {
+        if (has_value())
+        {
+            this->val = forward<U>(v);
+        }
+        else
+        {
+            if (is_nothrow_constructible<T, U>::value)
+            {
+                this->err.~E();
+                ::new (static_cast<void*>(addressof(this->val))) T(forward<U>(v));
+                this->has_val = true;
+            }
+            else if (is_nothrow_move_constructible<T>::value)
+            {
+                T tmp(forward<U>(v));
+                this->err.~E();
+                ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                this->has_val = true;
+            }
+            else
+            {
+                E tmp(move(this->err));
+                this->err.~E();
+                try
+                {
+                    ::new (static_cast<void*>(addressof(this->val))) T(forward<U>(v));
+                    this->has_val = true;
+                }
+                catch (...)
+                {
+                    ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                    throw;
+                }
+            }
+        }
+        return *this;
+    }
+
+    template <class G>
+    typename enable_if<is_constructible<E, const G&>::value && is_assignable<E&, const G&>::value
+                           && (is_nothrow_constructible<E, const G&>::value
+                               || is_nothrow_move_constructible<T>::value
+                               || is_nothrow_move_constructible<E>::value),
+                       expected&>::type
+    operator=(const unexpected<G>& e)
+    {
+        if (has_value())
+        {
+            if (is_nothrow_constructible<E, const G&>::value)
+            {
+                this->val.~T();
+                ::new (static_cast<void*>(addressof(this->err))) E(e.error());
+                this->has_val = false;
+            }
+            else if (is_nothrow_move_constructible<E>::value)
+            {
+                E tmp(e.error());
+                this->val.~T();
+                ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                this->has_val = false;
+            }
+            else
+            {
+                T tmp(move(this->val));
+                this->val.~T();
+                try
+                {
+                    ::new (static_cast<void*>(addressof(this->err))) E(e.error());
+                    this->has_val = false;
+                }
+                catch (...)
+                {
+                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    throw;
+                }
+            }
+        }
+        else
+        {
+            this->err = e.error();
+        }
+        return *this;
+    }
+
+
+    template <class G>
+    typename enable_if<is_constructible<E, G&&>::value && is_assignable<E&, G&&>::value
+                           && (is_nothrow_constructible<E, G&&>::value
+                               || is_nothrow_move_constructible<T>::value
+                               || is_nothrow_move_constructible<E>::value),
+                       expected&>::type
+    operator=(unexpected<G>&& e)
+    {
+        if (has_value())
+        {
+            if (is_nothrow_constructible<E, G&&>::value)
+            {
+                this->val.~T();
+                ::new (static_cast<void*>(addressof(this->err))) E(move(e.error()));
+                this->has_val = false;
+            }
+            else if (is_nothrow_move_constructible<E>::value)
+            {
+                E tmp(move(e.error()));
+                this->val.~T();
+                ::new (static_cast<void*>(addressof(this->err))) E(move(tmp));
+                this->has_val = false;
+            }
+            else
+            {
+                T tmp(move(this->val));
+                this->val.~T();
+                try
+                {
+                    ::new (static_cast<void*>(addressof(this->err))) E(move(e.error()));
+                    this->has_val = false;
+                }
+                catch (...)
+                {
+                    ::new (static_cast<void*>(addressof(this->val))) T(move(tmp));
+                    throw;
+                }
+            }
+        }
+        else
+        {
+            this->err = move(e.error());
+        }
+        return *this;
+    }
 };
 
 }  // namespace std
