@@ -1182,6 +1182,51 @@ public:
                                  unexpected<typename detail::invoke_result<F, const E&&>::type>(
                                      forward<F>(f)(move(error()))));
     }
+
+    template <class T2, class E2>
+    constexpr bool operator==(const expected<T2, E2>& rhs) const
+    {
+        if (has_value() != rhs.has_value())
+            return false;
+        return has_value() ? **this == *rhs : error() == rhs.error();
+    }
+
+    template <class T2, class E2>
+    constexpr bool operator!=(const expected<T2, E2>& rhs) const
+    {
+        return !(*this == rhs);
+    }
+
+    template <class T2>
+    constexpr bool operator==(const T2& v) const
+    {
+        return has_value() && **this == v;
+    }
+
+    template <class T2>
+    constexpr bool operator!=(const T2& v) const
+    {
+        return !(*this == v);
+    }
+
+    template <class E2>
+    constexpr bool operator==(const unexpected<E2>& e) const
+    {
+        return !has_value() && error() == e.error();
+    }
+
+    template <class E2>
+    constexpr bool operator!=(const unexpected<E2>& e) const
+    {
+        return !(*this == e);
+    }
+
+private:
+    template <class Tp>
+    static constexpr Tp* addressof(Tp& r) noexcept
+    {
+        return reinterpret_cast<Tp*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(r)));
+    }
 };
 
 }  // namespace std
