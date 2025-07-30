@@ -190,6 +190,161 @@ struct expected_void_storage_base<E, true> : expected_destructor_base<true>
     }
 };
 
+template <class T, class E>
+using expected_storage = expected_storage_base<T, E>;
+
+template <class E>
+using expected_void_storage = expected_void_storage_base<E>;
+
+
+template <class T, class E>
+struct expected_copy_base : expected_storage<T, E>
+{
+    using expected_storage<T, E>::expected_storage;
+
+    expected_copy_base() = default;
+    expected_copy_base(const expected_copy_base&) = default;
+    expected_copy_base(expected_copy_base&&) = default;
+    expected_copy_base& operator=(const expected_copy_base&) = default;
+    expected_copy_base& operator=(expected_copy_base&&) = default;
+
+    template <
+        bool Dummy = true,
+        class = typename enable_if<
+            Dummy && (!is_copy_constructible<T>::value || !is_copy_constructible<E>::value)>::type>
+    expected_copy_base(const expected_copy_base&) = delete;
+};
+
+template <class E>
+struct expected_void_copy_base : expected_void_storage<E>
+{
+    using expected_void_storage<E>::expected_void_storage;
+
+    expected_void_copy_base() = default;
+    expected_void_copy_base(const expected_void_copy_base&) = default;
+    expected_void_copy_base(expected_void_copy_base&&) = default;
+    expected_void_copy_base& operator=(const expected_void_copy_base&) = default;
+    expected_void_copy_base& operator=(expected_void_copy_base&&) = default;
+
+    template <bool Dummy = true,
+              class = typename enable_if<Dummy && !is_copy_constructible<E>::value>::type>
+    expected_void_copy_base(const expected_void_copy_base&) = delete;
+};
+
+template <class T, class E>
+struct expected_move_base : expected_copy_base<T, E>
+{
+    using expected_copy_base<T, E>::expected_copy_base;
+
+    expected_move_base() = default;
+    expected_move_base(const expected_move_base&) = default;
+    expected_move_base(expected_move_base&&) = default;
+    expected_move_base& operator=(const expected_move_base&) = default;
+    expected_move_base& operator=(expected_move_base&&) = default;
+
+    template <
+        bool Dummy = true,
+        class = typename enable_if<
+            Dummy && (!is_move_constructible<T>::value || !is_move_constructible<E>::value)>::type>
+    expected_move_base(expected_move_base&&) = delete;
+};
+
+template <class E>
+struct expected_void_move_base : expected_void_copy_base<E>
+{
+    using expected_void_copy_base<E>::expected_void_copy_base;
+
+    expected_void_move_base() = default;
+    expected_void_move_base(const expected_void_move_base&) = default;
+    expected_void_move_base(expected_void_move_base&&) = default;
+    expected_void_move_base& operator=(const expected_void_move_base&) = default;
+    expected_void_move_base& operator=(expected_void_move_base&&) = default;
+
+    template <bool Dummy = true,
+              class = typename enable_if<Dummy && !is_move_constructible<E>::value>::type>
+    expected_void_move_base(expected_void_move_base&&) = delete;
+};
+
+template <class T, class E>
+struct expected_copy_assign_base : expected_move_base<T, E>
+{
+    using expected_move_base<T, E>::expected_move_base;
+
+    expected_copy_assign_base() = default;
+    expected_copy_assign_base(const expected_copy_assign_base&) = default;
+    expected_copy_assign_base(expected_copy_assign_base&&) = default;
+    expected_copy_assign_base& operator=(const expected_copy_assign_base&) = default;
+    expected_copy_assign_base& operator=(expected_copy_assign_base&&) = default;
+
+    template <bool Dummy = true,
+              class = typename enable_if<
+                  Dummy
+                  && (!is_copy_assignable<T>::value || !is_copy_constructible<T>::value
+                      || !is_copy_assignable<E>::value || !is_copy_constructible<E>::value)>::type>
+    expected_copy_assign_base& operator=(const expected_copy_assign_base&) = delete;
+};
+
+template <class E>
+struct expected_void_copy_assign_base : expected_void_move_base<E>
+{
+    using expected_void_move_base<E>::expected_void_move_base;
+
+    expected_void_copy_assign_base() = default;
+    expected_void_copy_assign_base(const expected_void_copy_assign_base&) = default;
+    expected_void_copy_assign_base(expected_void_copy_assign_base&&) = default;
+    expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base&) = default;
+    expected_void_copy_assign_base& operator=(expected_void_copy_assign_base&&) = default;
+
+    template <
+        bool Dummy = true,
+        class = typename enable_if<
+            Dummy && (!is_copy_assignable<E>::value || !is_copy_constructible<E>::value)>::type>
+    expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base&) = delete;
+};
+
+template <class T, class E>
+struct expected_move_assign_base : expected_copy_assign_base<T, E>
+{
+    using expected_copy_assign_base<T, E>::expected_copy_assign_base;
+
+    expected_move_assign_base() = default;
+    expected_move_assign_base(const expected_move_assign_base&) = default;
+    expected_move_assign_base(expected_move_assign_base&&) = default;
+    expected_move_assign_base& operator=(const expected_move_assign_base&) = default;
+    expected_move_assign_base& operator=(expected_move_assign_base&&) = default;
+
+    template <bool Dummy = true,
+              class = typename enable_if<
+                  Dummy
+                  && (!is_move_assignable<T>::value || !is_move_constructible<T>::value
+                      || !is_move_assignable<E>::value || !is_move_constructible<E>::value)>::type>
+    expected_move_assign_base& operator=(expected_move_assign_base&&) = delete;
+};
+
+template <class E>
+struct expected_void_move_assign_base : expected_void_copy_assign_base<E>
+{
+    using expected_void_copy_assign_base<E>::expected_void_copy_assign_base;
+
+    expected_void_move_assign_base() = default;
+    expected_void_move_assign_base(const expected_void_move_assign_base&) = default;
+    expected_void_move_assign_base(expected_void_move_assign_base&&) = default;
+    expected_void_move_assign_base& operator=(const expected_void_move_assign_base&) = default;
+    expected_void_move_assign_base& operator=(expected_void_move_assign_base&&) = default;
+
+    template <
+        bool Dummy = true,
+        class = typename enable_if<
+            Dummy && (!is_move_assignable<E>::value || !is_move_constructible<E>::value)>::type>
+    expected_void_move_assign_base& operator=(expected_void_move_assign_base&&) = delete;
+};
+
+template <class T, class E>
+using expected_base = expected_move_assign_base<T, E>;
+
+template <class E>
+using expected_void_base = expected_void_move_assign_base<E>;
+
 template <class T>
 struct is_nothrow_swappable
 {
