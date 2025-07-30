@@ -1229,6 +1229,28 @@ private:
     }
 };
 
+template <class E>
+class expected<void, E> : private detail::expected_void_base<E>
+{
+    static_assert(!is_reference<E>::value, "E must not be a reference");
+    static_assert(!is_function<E>::value, "E must not be a function");
+
+    using base = detail::expected_void_base<E>;
+
+public:
+    using value_type = void;
+    using error_type = E;
+    using unexpected_type = unexpected<E>;
+
+    template <class U>
+    using rebind = expected<U, error_type>;
+
+    constexpr expected() noexcept : base() {}
+
+    constexpr expected(const expected&) = default;
+    constexpr expected(expected&&) = default;
+};
+
 }  // namespace std
 
 #endif  // End of include guard: LIB_STD_EXPECTED_POLYFILL_CPP11_HPP_ztk3ue
