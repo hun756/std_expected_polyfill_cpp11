@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace std
+namespace std_
 {
 
 template <class E>
@@ -18,39 +18,39 @@ namespace detail
 {
 
 template <class T>
-struct is_unexpected_impl : false_type
+struct is_unexpected_impl : std::false_type
 {
 };
 
 template <class E>
-struct is_unexpected_impl<unexpected<E>> : true_type
+struct is_unexpected_impl<unexpected<E>> : std::true_type
 {
 };
 
 template <class T>
-struct is_unexpected : is_unexpected_impl<typename decay<T>::type>
+struct is_unexpected : is_unexpected_impl<typename std::decay<T>::type>
 {
 };
 
 template <class T>
-struct is_expected_impl : false_type
+struct is_expected_impl : std::false_type
 {
 };
 
 template <class T, class E>
-struct is_expected_impl<expected<T, E>> : true_type
+struct is_expected_impl<expected<T, E>> : std::true_type
 {
 };
 
 template <class T>
-struct is_expected : is_expected_impl<typename decay<T>::type>
+struct is_expected : is_expected_impl<typename std::decay<T>::type>
 {
 };
 
 template <class T>
 struct remove_cvref
 {
-    typedef typename remove_cv<typename remove_reference<T>::type>::type type;
+    typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
 };
 
 struct in_place_t
@@ -86,7 +86,8 @@ struct expected_destructor_base<false>
 
 template <class T,
           class E,
-          bool = is_trivially_destructible<T>::value && is_trivially_destructible<E>::value>
+          bool =
+              std::is_trivially_destructible<T>::value && std::is_trivially_destructible<E>::value>
 struct expected_storage_base : expected_destructor_base<false>
 {
     using base = expected_destructor_base<false>;
@@ -144,7 +145,7 @@ struct expected_storage_base<T, E, true> : expected_destructor_base<true>
     }
 };
 
-template <class E, bool = is_trivially_destructible<E>::value>
+template <class E, bool = std::is_trivially_destructible<E>::value>
 struct expected_void_storage_base : expected_destructor_base<false>
 {
     using base = expected_destructor_base<false>;
@@ -208,10 +209,10 @@ struct expected_copy_base : expected_storage<T, E>
     expected_copy_base& operator=(const expected_copy_base&) = default;
     expected_copy_base& operator=(expected_copy_base&&) = default;
 
-    template <
-        bool Dummy = true,
-        class = typename enable_if<
-            Dummy && (!is_copy_constructible<T>::value || !is_copy_constructible<E>::value)>::type>
+    template <bool Dummy = true,
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_copy_constructible<T>::value
+                                                  || !std::is_copy_constructible<E>::value)>::type>
     expected_copy_base(const expected_copy_base&) = delete;
 };
 
@@ -227,7 +228,7 @@ struct expected_void_copy_base : expected_void_storage<E>
     expected_void_copy_base& operator=(expected_void_copy_base&&) = default;
 
     template <bool Dummy = true,
-              class = typename enable_if<Dummy && !is_copy_constructible<E>::value>::type>
+              class = typename std::enable_if<Dummy && !std::is_copy_constructible<E>::value>::type>
     expected_void_copy_base(const expected_void_copy_base&) = delete;
 };
 
@@ -242,10 +243,10 @@ struct expected_move_base : expected_copy_base<T, E>
     expected_move_base& operator=(const expected_move_base&) = default;
     expected_move_base& operator=(expected_move_base&&) = default;
 
-    template <
-        bool Dummy = true,
-        class = typename enable_if<
-            Dummy && (!is_move_constructible<T>::value || !is_move_constructible<E>::value)>::type>
+    template <bool Dummy = true,
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_move_constructible<T>::value
+                                                  || !std::is_move_constructible<E>::value)>::type>
     expected_move_base(expected_move_base&&) = delete;
 };
 
@@ -261,7 +262,7 @@ struct expected_void_move_base : expected_void_copy_base<E>
     expected_void_move_base& operator=(expected_void_move_base&&) = default;
 
     template <bool Dummy = true,
-              class = typename enable_if<Dummy && !is_move_constructible<E>::value>::type>
+              class = typename std::enable_if<Dummy && !std::is_move_constructible<E>::value>::type>
     expected_void_move_base(expected_void_move_base&&) = delete;
 };
 
@@ -277,10 +278,11 @@ struct expected_copy_assign_base : expected_move_base<T, E>
     expected_copy_assign_base& operator=(expected_copy_assign_base&&) = default;
 
     template <bool Dummy = true,
-              class = typename enable_if<
-                  Dummy
-                  && (!is_copy_assignable<T>::value || !is_copy_constructible<T>::value
-                      || !is_copy_assignable<E>::value || !is_copy_constructible<E>::value)>::type>
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_copy_assignable<T>::value
+                                                  || !std::is_copy_constructible<T>::value
+                                                  || !std::is_copy_assignable<E>::value
+                                                  || !std::is_copy_constructible<E>::value)>::type>
     expected_copy_assign_base& operator=(const expected_copy_assign_base&) = delete;
 };
 
@@ -295,10 +297,10 @@ struct expected_void_copy_assign_base : expected_void_move_base<E>
     expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base&) = default;
     expected_void_copy_assign_base& operator=(expected_void_copy_assign_base&&) = default;
 
-    template <
-        bool Dummy = true,
-        class = typename enable_if<
-            Dummy && (!is_copy_assignable<E>::value || !is_copy_constructible<E>::value)>::type>
+    template <bool Dummy = true,
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_copy_assignable<E>::value
+                                                  || !std::is_copy_constructible<E>::value)>::type>
     expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base&) = delete;
 };
 
@@ -314,10 +316,11 @@ struct expected_move_assign_base : expected_copy_assign_base<T, E>
     expected_move_assign_base& operator=(expected_move_assign_base&&) = default;
 
     template <bool Dummy = true,
-              class = typename enable_if<
-                  Dummy
-                  && (!is_move_assignable<T>::value || !is_move_constructible<T>::value
-                      || !is_move_assignable<E>::value || !is_move_constructible<E>::value)>::type>
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_move_assignable<T>::value
+                                                  || !std::is_move_constructible<T>::value
+                                                  || !std::is_move_assignable<E>::value
+                                                  || !std::is_move_constructible<E>::value)>::type>
     expected_move_assign_base& operator=(expected_move_assign_base&&) = delete;
 };
 
@@ -332,10 +335,10 @@ struct expected_void_move_assign_base : expected_void_copy_assign_base<E>
     expected_void_move_assign_base& operator=(const expected_void_move_assign_base&) = default;
     expected_void_move_assign_base& operator=(expected_void_move_assign_base&&) = default;
 
-    template <
-        bool Dummy = true,
-        class = typename enable_if<
-            Dummy && (!is_move_assignable<E>::value || !is_move_constructible<E>::value)>::type>
+    template <bool Dummy = true,
+              class = typename std::enable_if<Dummy
+                                              && (!std::is_move_assignable<E>::value
+                                                  || !std::is_move_constructible<E>::value)>::type>
     expected_void_move_assign_base& operator=(expected_void_move_assign_base&&) = delete;
 };
 
@@ -349,15 +352,15 @@ template <class T>
 struct is_nothrow_swappable
 {
     template <class U>
-    static auto test(int) -> decltype(swap(declval<U&>(), declval<U&>()), true_type{});
+    static auto test(int) -> decltype(swap(declval<U&>(), declval<U&>()), std::true_type{});
     template <class>
-    static false_type test(...);
+    static std::false_type test(...);
 
     static constexpr bool value = noexcept(swap(declval<T&>(), declval<T&>()));
 };
 
 template <class T, class U>
-struct is_same_decayed : is_same<typename decay<T>::type, typename decay<U>::type>
+struct is_same_decayed : std::is_same<typename std::decay<T>::type, typename std::decay<U>::type>
 {
 };
 
@@ -373,7 +376,7 @@ template <class E>
 class bad_expected_access;
 
 template <>
-class bad_expected_access<void> : public exception
+class bad_expected_access<void> : public std::exception
 {
 public:
     bad_expected_access() = default;
@@ -418,19 +421,19 @@ template <class E>
 class unexpected
 {
 public:
-    static_assert(!is_same<E, void>::value, "E must not be void");
-    static_assert(!is_reference<E>::value, "E must not be a reference");
+    static_assert(!std::is_same<E, void>::value, "E must not be void");
+    static_assert(!std::is_reference<E>::value, "E must not be a reference");
     static_assert(!detail::is_unexpected<E>::value, "E must not be unexpected (no nesting)");
 
     template <class Err = E>
-    constexpr explicit unexpected(Err&& e) noexcept(is_nothrow_constructible<E, Err&&>::value)
+    constexpr explicit unexpected(Err&& e) noexcept(std::is_nothrow_constructible<E, Err&&>::value)
         : val(std::forward<Err>(e))
     {
     }
 
     template <class... Args>
     constexpr explicit unexpected(detail::in_place_t, Args&&... args) noexcept(
-        is_nothrow_constructible<E, Args...>::value)
+        std::is_nothrow_constructible<E, Args...>::value)
         : val(std::forward<Args>(args)...)
     {
     }
@@ -485,22 +488,22 @@ constexpr void swap(unexpected<E>& lhs, unexpected<E>& rhs) noexcept(noexcept(lh
 }
 
 template <class E>
-constexpr unexpected<typename decay<E>::type> make_unexpected(E&& e)
+constexpr unexpected<typename std::decay<E>::type> make_unexpected(E&& e)
 {
-    return unexpected<typename decay<E>::type>(std::forward<E>(e));
+    return unexpected<typename std::decay<E>::type>(std::forward<E>(e));
 }
 
 template <class T, class E>
 class expected : private detail::expected_base<T, E>
 {
-    static_assert(!is_reference<T>::value, "T must not be a reference");
-    static_assert(!is_function<T>::value, "T must not be a function");
-    static_assert(!is_same<typename detail::remove_cvref<T>::type, detail::in_place_t>::value,
+    static_assert(!std::is_reference<T>::value, "T must not be a reference");
+    static_assert(!std::is_function<T>::value, "T must not be a function");
+    static_assert(!std::is_same<typename detail::remove_cvref<T>::type, detail::in_place_t>::value,
                   "T must not be in_place_t");
     static_assert(!detail::is_unexpected<typename detail::remove_cvref<T>::type>::value,
                   "T must not be unexpected");
-    static_assert(!is_reference<E>::value, "E must not be a reference");
-    static_assert(!is_function<E>::value, "E must not be a function");
+    static_assert(!std::is_reference<E>::value, "E must not be a reference");
+    static_assert(!std::is_function<E>::value, "E must not be a function");
 
     using base = detail::expected_base<T, E>;
 
@@ -512,7 +515,7 @@ public:
     template <class U>
     using rebind = expected<U, error_type>;
 
-    constexpr expected() noexcept(is_nothrow_default_constructible<T>::value)
+    constexpr expected() noexcept(std::is_nothrow_default_constructible<T>::value)
         : base(detail::in_place)
     {
     }
@@ -524,18 +527,18 @@ public:
     template <class U, class G>
     constexpr expected(
         const expected<U, G>& rhs,
-        typename enable_if<
-            is_constructible<T, const U&>::value && is_constructible<E, const G&>::value
-            && !is_constructible<T, expected<U, G>&>::value
-            && !is_constructible<T, expected<U, G>>::value
-            && !is_constructible<T, const expected<U, G>&>::value
-            && !is_constructible<T, const expected<U, G>>::value
-            && !is_convertible<expected<U, G>&, T>::value
-            && !is_convertible<expected<U, G>, T>::value
-            && !is_convertible<const expected<U, G>&, T>::value
-            && !is_convertible<const expected<U, G>, T>::value
-            && (is_convertible<const U&, T>::value && is_convertible<const G&, E>::value)>::type* =
-            nullptr)
+        typename std::enable_if<std::is_constructible<T, const U&>::value
+                                && std::is_constructible<E, const G&>::value
+                                && !std::is_constructible<T, expected<U, G>&>::value
+                                && !std::is_constructible<T, expected<U, G>>::value
+                                && !std::is_constructible<T, const expected<U, G>&>::value
+                                && !std::is_constructible<T, const expected<U, G>>::value
+                                && !std::is_convertible<expected<U, G>&, T>::value
+                                && !std::is_convertible<expected<U, G>, T>::value
+                                && !std::is_convertible<const expected<U, G>&, T>::value
+                                && !std::is_convertible<const expected<U, G>, T>::value
+                                && (std::is_convertible<const U&, T>::value
+                                    && std::is_convertible<const G&, E>::value)>::type* = nullptr)
     {
         if (rhs.has_value())
         {
@@ -551,18 +554,18 @@ public:
     template <class U, class G>
     constexpr explicit expected(
         const expected<U, G>& rhs,
-        typename enable_if<is_constructible<T, const U&>::value
-                           && is_constructible<E, const G&>::value
-                           && !is_constructible<T, expected<U, G>&>::value
-                           && !is_constructible<T, expected<U, G>>::value
-                           && !is_constructible<T, const expected<U, G>&>::value
-                           && !is_constructible<T, const expected<U, G>>::value
-                           && !is_convertible<expected<U, G>&, T>::value
-                           && !is_convertible<expected<U, G>, T>::value
-                           && !is_convertible<const expected<U, G>&, T>::value
-                           && !is_convertible<const expected<U, G>, T>::value
-                           && (!is_convertible<const U&, T>::value
-                               || !is_convertible<const G&, E>::value)>::type* = nullptr)
+        typename std::enable_if<std::is_constructible<T, const U&>::value
+                                && std::is_constructible<E, const G&>::value
+                                && !std::is_constructible<T, expected<U, G>&>::value
+                                && !std::is_constructible<T, expected<U, G>>::value
+                                && !std::is_constructible<T, const expected<U, G>&>::value
+                                && !std::is_constructible<T, const expected<U, G>>::value
+                                && !std::is_convertible<expected<U, G>&, T>::value
+                                && !std::is_convertible<expected<U, G>, T>::value
+                                && !std::is_convertible<const expected<U, G>&, T>::value
+                                && !std::is_convertible<const expected<U, G>, T>::value
+                                && (!std::is_convertible<const U&, T>::value
+                                    || !std::is_convertible<const G&, E>::value)>::type* = nullptr)
     {
         if (rhs.has_value())
         {
@@ -578,17 +581,18 @@ public:
     template <class U, class G>
     constexpr expected(
         expected<U, G>&& rhs,
-        typename enable_if<is_constructible<T, U&&>::value && is_constructible<E, G&&>::value
-                           && !is_constructible<T, expected<U, G>&>::value
-                           && !is_constructible<T, expected<U, G>>::value
-                           && !is_constructible<T, const expected<U, G>&>::value
-                           && !is_constructible<T, const expected<U, G>>::value
-                           && !is_convertible<expected<U, G>&, T>::value
-                           && !is_convertible<expected<U, G>, T>::value
-                           && !is_convertible<const expected<U, G>&, T>::value
-                           && !is_convertible<const expected<U, G>, T>::value
-                           && (is_convertible<U&&, T>::value
-                               && is_convertible<G&&, E>::value)>::type* = nullptr)
+        typename std::enable_if<
+            std::is_constructible<T, U&&>::value && std::is_constructible<E, G&&>::value
+            && !std::is_constructible<T, expected<U, G>&>::value
+            && !std::is_constructible<T, expected<U, G>>::value
+            && !std::is_constructible<T, const expected<U, G>&>::value
+            && !std::is_constructible<T, const expected<U, G>>::value
+            && !std::is_convertible<expected<U, G>&, T>::value
+            && !std::is_convertible<expected<U, G>, T>::value
+            && !std::is_convertible<const expected<U, G>&, T>::value
+            && !std::is_convertible<const expected<U, G>, T>::value
+            && (std::is_convertible<U&&, T>::value && std::is_convertible<G&&, E>::value)>::type* =
+            nullptr)
     {
         if (rhs.has_value())
         {
@@ -604,17 +608,18 @@ public:
     template <class U, class G>
     constexpr explicit expected(
         expected<U, G>&& rhs,
-        typename enable_if<is_constructible<T, U&&>::value && is_constructible<E, G&&>::value
-                           && !is_constructible<T, expected<U, G>&>::value
-                           && !is_constructible<T, expected<U, G>>::value
-                           && !is_constructible<T, const expected<U, G>&>::value
-                           && !is_constructible<T, const expected<U, G>>::value
-                           && !is_convertible<expected<U, G>&, T>::value
-                           && !is_convertible<expected<U, G>, T>::value
-                           && !is_convertible<const expected<U, G>&, T>::value
-                           && !is_convertible<const expected<U, G>, T>::value
-                           && (!is_convertible<U&&, T>::value
-                               || !is_convertible<G&&, E>::value)>::type* = nullptr)
+        typename std::enable_if<std::is_constructible<T, U&&>::value
+                                && std::is_constructible<E, G&&>::value
+                                && !std::is_constructible<T, expected<U, G>&>::value
+                                && !std::is_constructible<T, expected<U, G>>::value
+                                && !std::is_constructible<T, const expected<U, G>&>::value
+                                && !std::is_constructible<T, const expected<U, G>>::value
+                                && !std::is_convertible<expected<U, G>&, T>::value
+                                && !std::is_convertible<expected<U, G>, T>::value
+                                && !std::is_convertible<const expected<U, G>&, T>::value
+                                && !std::is_convertible<const expected<U, G>, T>::value
+                                && (!std::is_convertible<U&&, T>::value
+                                    || !std::is_convertible<G&&, E>::value)>::type* = nullptr)
     {
         if (rhs.has_value())
         {
@@ -628,13 +633,13 @@ public:
     }
 
     template <class U = T>
-    constexpr expected(
-        U&& v,
-        typename enable_if<!detail::is_same_decayed<U, expected>::value
+    constexpr expected(U&& v,
+                       typename std::enable_if<
+                           !detail::is_same_decayed<U, expected>::value
                            && !detail::is_same_decayed<U, detail::in_place_t>::value
                            && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
-                           && is_constructible<T, U&&>::value
-                           && is_convertible<U&&, T>::value>::type* = nullptr)
+                           && std::is_constructible<T, U&&>::value
+                           && std::is_convertible<U&&, T>::value>::type* = nullptr)
         : base(detail::in_place, std::forward<U>(v))
     {
     }
@@ -642,19 +647,21 @@ public:
     template <class U = T>
     constexpr explicit expected(
         U&& v,
-        typename enable_if<!detail::is_same_decayed<U, expected>::value
-                           && !detail::is_same_decayed<U, detail::in_place_t>::value
-                           && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
-                           && is_constructible<T, U&&>::value
-                           && !is_convertible<U&&, T>::value>::type* = nullptr)
+        typename std::enable_if<
+            !detail::is_same_decayed<U, expected>::value
+            && !detail::is_same_decayed<U, detail::in_place_t>::value
+            && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
+            && std::is_constructible<T, U&&>::value && !std::is_convertible<U&&, T>::value>::type* =
+            nullptr)
         : base(detail::in_place, std::forward<U>(v))
     {
     }
 
     template <class G = E>
-    constexpr expected(const unexpected<G>& e,
-                       typename enable_if<is_constructible<E, const G&>::value
-                                          && is_convertible<const G&, E>::value>::type* = nullptr)
+    constexpr expected(
+        const unexpected<G>& e,
+        typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && std::is_convertible<const G&, E>::value>::type* = nullptr)
         : base(detail::in_place_type_t<unexpected_type>{}, e.error())
     {
     }
@@ -662,16 +669,17 @@ public:
     template <class G = E>
     constexpr explicit expected(
         const unexpected<G>& e,
-        typename enable_if<is_constructible<E, const G&>::value
-                           && !is_convertible<const G&, E>::value>::type* = nullptr)
+        typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && !std::is_convertible<const G&, E>::value>::type* = nullptr)
         : base(detail::in_place_type_t<unexpected_type>{}, e.error())
     {
     }
 
     template <class G = E>
-    constexpr expected(unexpected<G>&& e,
-                       typename enable_if<is_constructible<E, G&&>::value
-                                          && is_convertible<G&&, E>::value>::type* = nullptr)
+    constexpr expected(
+        unexpected<G>&& e,
+        typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && std::is_convertible<G&&, E>::value>::type* = nullptr)
         : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
     {
     }
@@ -679,15 +687,15 @@ public:
     template <class G = E>
     constexpr explicit expected(
         unexpected<G>&& e,
-        typename enable_if<is_constructible<E, G&&>::value
-                           && !is_convertible<G&&, E>::value>::type* = nullptr)
+        typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && !std::is_convertible<G&&, E>::value>::type* = nullptr)
         : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
     {
     }
 
     template <class... Args>
     constexpr explicit expected(detail::in_place_t, Args&&... args) noexcept(
-        is_nothrow_constructible<T, Args...>::value)
+        std::is_nothrow_constructible<T, Args...>::value)
         : base(detail::in_place, std::forward<Args>(args)...)
     {
     }
@@ -695,15 +703,17 @@ public:
     template <class U, class... Args>
     constexpr explicit expected(
         detail::in_place_t,
-        initializer_list<U> il,
-        Args&&... args) noexcept(is_nothrow_constructible<T, initializer_list<U>&, Args...>::value)
+        std::initializer_list<U> il,
+        Args&&... args) noexcept(std::is_nothrow_constructible<T,
+                                                               std::initializer_list<U>&,
+                                                               Args...>::value)
         : base(detail::in_place, il, std::forward<Args>(args)...)
     {
     }
 
     template <class... Args>
     constexpr explicit expected(detail::in_place_type_t<unexpected_type>, Args&&... args) noexcept(
-        is_nothrow_constructible<E, Args...>::value)
+        std::is_nothrow_constructible<E, Args...>::value)
         : base(detail::in_place_type_t<unexpected_type>{}, std::forward<Args>(args)...)
     {
     }
@@ -711,8 +721,10 @@ public:
     template <class U, class... Args>
     constexpr explicit expected(
         detail::in_place_type_t<unexpected_type>,
-        initializer_list<U> il,
-        Args&&... args) noexcept(is_nothrow_constructible<E, initializer_list<U>&, Args...>::value)
+        std::initializer_list<U> il,
+        Args&&... args) noexcept(std::is_nothrow_constructible<E,
+                                                               std::initializer_list<U>&,
+                                                               Args...>::value)
         : base(detail::in_place_type_t<unexpected_type>{}, il, std::forward<Args>(args)...)
     {
     }
@@ -721,13 +733,14 @@ public:
     expected& operator=(expected&&) = default;
 
     template <class U = T>
-    typename enable_if<!detail::is_same_decayed<U, expected>::value
-                           && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
-                           && is_constructible<T, U>::value && is_assignable<T&, U>::value
-                           && (is_nothrow_constructible<T, U>::value
-                               || is_nothrow_move_constructible<T>::value
-                               || is_nothrow_move_constructible<E>::value),
-                       expected&>::type
+    typename std::enable_if<
+        !detail::is_same_decayed<U, expected>::value
+            && !detail::is_unexpected<typename detail::remove_cvref<U>::type>::value
+            && std::is_constructible<T, U>::value && std::is_assignable<T&, U>::value
+            && (std::is_nothrow_constructible<T, U>::value
+                || std::is_nothrow_move_constructible<T>::value
+                || std::is_nothrow_move_constructible<E>::value),
+        expected&>::type
     operator=(U&& v)
     {
         if (has_value())
@@ -736,13 +749,13 @@ public:
         }
         else
         {
-            if (is_nothrow_constructible<T, U>::value)
+            if (std::is_nothrow_constructible<T, U>::value)
             {
                 this->err.~E();
                 ::new (static_cast<void*>(std::addressof(this->val))) T(std::forward<U>(v));
                 this->has_val = true;
             }
-            else if (is_nothrow_move_constructible<T>::value)
+            else if (std::is_nothrow_move_constructible<T>::value)
             {
                 T tmp(std::forward<U>(v));
                 this->err.~E();
@@ -769,22 +782,23 @@ public:
     }
 
     template <class G>
-    typename enable_if<is_constructible<E, const G&>::value && is_assignable<E&, const G&>::value
-                           && (is_nothrow_constructible<E, const G&>::value
-                               || is_nothrow_move_constructible<T>::value
-                               || is_nothrow_move_constructible<E>::value),
-                       expected&>::type
+    typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && std::is_assignable<E&, const G&>::value
+                                && (std::is_nothrow_constructible<E, const G&>::value
+                                    || std::is_nothrow_move_constructible<T>::value
+                                    || std::is_nothrow_move_constructible<E>::value),
+                            expected&>::type
     operator=(const unexpected<G>& e)
     {
         if (has_value())
         {
-            if (is_nothrow_constructible<E, const G&>::value)
+            if (std::is_nothrow_constructible<E, const G&>::value)
             {
                 this->val.~T();
                 ::new (static_cast<void*>(std::addressof(this->err))) E(e.error());
                 this->has_val = false;
             }
-            else if (is_nothrow_move_constructible<E>::value)
+            else if (std::is_nothrow_move_constructible<E>::value)
             {
                 E tmp(e.error());
                 this->val.~T();
@@ -816,22 +830,23 @@ public:
 
 
     template <class G>
-    typename enable_if<is_constructible<E, G&&>::value && is_assignable<E&, G&&>::value
-                           && (is_nothrow_constructible<E, G&&>::value
-                               || is_nothrow_move_constructible<T>::value
-                               || is_nothrow_move_constructible<E>::value),
-                       expected&>::type
+    typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && std::is_assignable<E&, G&&>::value
+                                && (std::is_nothrow_constructible<E, G&&>::value
+                                    || std::is_nothrow_move_constructible<T>::value
+                                    || std::is_nothrow_move_constructible<E>::value),
+                            expected&>::type
     operator=(unexpected<G>&& e)
     {
         if (has_value())
         {
-            if (is_nothrow_constructible<E, G&&>::value)
+            if (std::is_nothrow_constructible<E, G&&>::value)
             {
                 this->val.~T();
                 ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(e.error()));
                 this->has_val = false;
             }
-            else if (is_nothrow_move_constructible<E>::value)
+            else if (std::is_nothrow_move_constructible<E>::value)
             {
                 E tmp(std::move(e.error()));
                 this->val.~T();
@@ -861,9 +876,9 @@ public:
         return *this;
     }
 
-    constexpr void swap(expected& rhs) noexcept(is_nothrow_move_constructible<T>::value
+    constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible<T>::value
                                                 && detail::is_nothrow_swappable<T>::value
-                                                && is_nothrow_move_constructible<E>::value
+                                                && std::is_nothrow_move_constructible<E>::value
                                                 && detail::is_nothrow_swappable<E>::value)
     {
         if (has_value() && rhs.has_value())
@@ -878,7 +893,7 @@ public:
         }
         else if (has_value() && !rhs.has_value())
         {
-            if (is_nothrow_move_constructible<E>::value)
+            if (std::is_nothrow_move_constructible<E>::value)
             {
                 E tmp(std::move(rhs.err));
                 rhs.err.~E();
@@ -1010,33 +1025,33 @@ public:
     template <class U>
     constexpr T value_or(U&& v) const&
     {
-        static_assert(is_copy_constructible<T>::value && is_convertible<U&&, T>::value,
+        static_assert(std::is_copy_constructible<T>::value && std::is_convertible<U&&, T>::value,
                       "T must be copy constructible and convertible from U");
-        return has_value() ? **this : static_cast<T>(forward<U>(v));
+        return has_value() ? **this : static_cast<T>(std::forward<U>(v));
     }
 
     template <class U>
     constexpr T value_or(U&& v) &&
     {
-        static_assert(is_move_constructible<T>::value && is_convertible<U&&, T>::value,
+        static_assert(std::is_move_constructible<T>::value && std::is_convertible<U&&, T>::value,
                       "T must be move constructible and convertible from U");
-        return has_value() ? move(**this) : static_cast<T>(forward<U>(v));
+        return has_value() ? std::move(**this) : static_cast<T>(std::forward<U>(v));
     }
 
     template <class G = E>
     constexpr E error_or(G&& e) const&
     {
-        static_assert(is_copy_constructible<E>::value && is_convertible<G&&, E>::value,
+        static_assert(std::is_copy_constructible<E>::value && std::is_convertible<G&&, E>::value,
                       "E must be copy constructible and convertible from G");
-        return has_value() ? static_cast<E>(forward<G>(e)) : error();
+        return has_value() ? static_cast<E>(std::forward<G>(e)) : error();
     }
 
     template <class G = E>
     constexpr E error_or(G&& e) &&
     {
-        static_assert(is_move_constructible<E>::value && is_convertible<G&&, E>::value,
+        static_assert(std::is_move_constructible<E>::value && std::is_convertible<G&&, E>::value,
                       "E must be move constructible and convertible from G");
-        return has_value() ? static_cast<E>(forward<G>(e)) : move(error());
+        return has_value() ? static_cast<E>(std::forward<G>(e)) : std::move(error());
     }
 
     template <class F>
@@ -1044,7 +1059,7 @@ public:
     {
         static_assert(detail::is_expected<typename detail::invoke_result<F, T&>::type>::value,
                       "F must return expected");
-        return has_value() ? forward<F>(f)(**this)
+        return has_value() ? std::forward<F>(f)(**this)
                            : typename detail::invoke_result<F, T&>::type(unexpected<E>(error()));
     }
 
@@ -1054,7 +1069,7 @@ public:
         static_assert(detail::is_expected<typename detail::invoke_result<F, const T&>::type>::value,
                       "F must return expected");
         return has_value()
-                   ? forward<F>(f)(**this)
+                   ? std::forward<F>(f)(**this)
                    : typename detail::invoke_result<F, const T&>::type(unexpected<E>(error()));
     }
 
@@ -1064,7 +1079,7 @@ public:
         static_assert(detail::is_expected<typename detail::invoke_result<F, T&&>::type>::value,
                       "F must return expected");
         return has_value()
-                   ? forward<F>(f)(move(**this))
+                   ? std::forward<F>(f)(move(**this))
                    : typename detail::invoke_result<F, T&&>::type(unexpected<E>(move(error())));
     }
 
@@ -1074,7 +1089,7 @@ public:
         static_assert(
             detail::is_expected<typename detail::invoke_result<F, const T&&>::type>::value,
             "F must return expected");
-        return has_value() ? forward<F>(f)(move(**this))
+        return has_value() ? std::forward<F>(f)(move(**this))
                            : typename detail::invoke_result<F, const T&&>::type(
                                  unexpected<E>(move(error())));
     }
@@ -1082,40 +1097,42 @@ public:
     template <class F>
     constexpr auto or_else(F&& f) & -> expected
     {
-        static_assert(is_same<expected, typename detail::invoke_result<F, E&>::type>::value,
+        static_assert(std::is_same<expected, typename detail::invoke_result<F, E&>::type>::value,
                       "F must return expected<T, E>");
-        return has_value() ? *this : forward<F>(f)(error());
+        return has_value() ? *this : std::forward<F>(f)(error());
     }
 
     template <class F>
     constexpr auto or_else(F&& f) const& -> expected
     {
-        static_assert(is_same<expected, typename detail::invoke_result<F, const E&>::type>::value,
-                      "F must return expected<T, E>");
-        return has_value() ? *this : forward<F>(f)(error());
+        static_assert(
+            std::is_same<expected, typename detail::invoke_result<F, const E&>::type>::value,
+            "F must return expected<T, E>");
+        return has_value() ? *this : std::forward<F>(f)(error());
     }
 
     template <class F>
     constexpr auto or_else(F&& f) && -> expected
     {
-        static_assert(is_same<expected, typename detail::invoke_result<F, E&&>::type>::value,
+        static_assert(std::is_same<expected, typename detail::invoke_result<F, E&&>::type>::value,
                       "F must return expected<T, E>");
-        return has_value() ? move(*this) : forward<F>(f)(move(error()));
+        return has_value() ? std::move(*this) : std::forward<F>(f)(move(error()));
     }
 
     template <class F>
     constexpr auto or_else(F&& f) const&& -> expected
     {
-        static_assert(is_same<expected, typename detail::invoke_result<F, const E&&>::type>::value,
-                      "F must return expected<T, E>");
-        return has_value() ? move(*this) : forward<F>(f)(move(error()));
+        static_assert(
+            std::is_same<expected, typename detail::invoke_result<F, const E&&>::type>::value,
+            "F must return expected<T, E>");
+        return has_value() ? std::move(*this) : std::forward<F>(f)(std::move(error()));
     }
 
     template <class F>
     constexpr auto transform(F&& f) & -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
                    : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
     }
 
@@ -1123,24 +1140,26 @@ public:
     constexpr auto transform(F&& f) const& -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
                    : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
     }
 
     template <class F>
     constexpr auto transform(F&& f) && -> expected<typename detail::invoke_result<F>::type, E>
     {
-        return has_value() ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
-                           : expected<typename detail::invoke_result<F>::type, E>(
-                                 unexpected<E>(move(error())));
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(
+                         unexpected<E>(std::move(error())));
     }
 
     template <class F>
     constexpr auto transform(F&& f) const&& -> expected<typename detail::invoke_result<F>::type, E>
     {
-        return has_value() ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
-                           : expected<typename detail::invoke_result<F>::type, E>(
-                                 unexpected<E>(move(error())));
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(
+                         unexpected<E>(std::move(error())));
     }
 
     template <class F>
@@ -1150,7 +1169,7 @@ public:
         return has_value() ? expected<void, typename detail::invoke_result<F, E&>::type>()
                            : expected<void, typename detail::invoke_result<F, E&>::type>(
                                  unexpected<typename detail::invoke_result<F, E&>::type>(
-                                     forward<F>(f)(error())));
+                                     std::forward<F>(f)(error())));
     }
 
     template <class F>
@@ -1160,7 +1179,7 @@ public:
         return has_value() ? expected<void, typename detail::invoke_result<F, const E&>::type>()
                            : expected<void, typename detail::invoke_result<F, const E&>::type>(
                                  unexpected<typename detail::invoke_result<F, const E&>::type>(
-                                     forward<F>(f)(error())));
+                                     std::forward<F>(f)(error())));
     }
 
     template <class F>
@@ -1170,7 +1189,7 @@ public:
         return has_value() ? expected<void, typename detail::invoke_result<F, E&&>::type>()
                            : expected<void, typename detail::invoke_result<F, E&&>::type>(
                                  unexpected<typename detail::invoke_result<F, E&&>::type>(
-                                     forward<F>(f)(move(error()))));
+                                     std::forward<F>(f)(std::move(error()))));
     }
 
     template <class F>
@@ -1180,7 +1199,7 @@ public:
         return has_value() ? expected<void, typename detail::invoke_result<F, const E&&>::type>()
                            : expected<void, typename detail::invoke_result<F, const E&&>::type>(
                                  unexpected<typename detail::invoke_result<F, const E&&>::type>(
-                                     forward<F>(f)(move(error()))));
+                                     std::forward<F>(f)(std::move(error()))));
     }
 
     template <class T2, class E2>
@@ -1232,8 +1251,8 @@ private:
 template <class E>
 class expected<void, E> : private detail::expected_void_base<E>
 {
-    static_assert(!is_reference<E>::value, "E must not be a reference");
-    static_assert(!is_function<E>::value, "E must not be a function");
+    static_assert(!std::is_reference<E>::value, "E must not be a reference");
+    static_assert(!std::is_function<E>::value, "E must not be a function");
 
     using base = detail::expected_void_base<E>;
 
@@ -1251,6 +1270,6 @@ public:
     constexpr expected(expected&&) = default;
 };
 
-}  // namespace std
+}  // namespace std_
 
 #endif  // End of include guard: LIB_STD_EXPECTED_POLYFILL_CPP11_HPP_ztk3ue
