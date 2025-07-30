@@ -361,6 +361,12 @@ struct is_same_decayed : is_same<typename decay<T>::type, typename decay<U>::typ
 {
 };
 
+template <typename F, typename... Args>
+struct invoke_result
+{
+    typedef decltype(std::declval<F>()(std::declval<Args>()...)) type;
+};
+
 }  // namespace detail
 
 template <class E>
@@ -999,6 +1005,110 @@ public:
     constexpr E&& error() && noexcept
     {
         return std::move(this->err);
+    }
+
+    template <class U>
+    constexpr T value_or(U&& v) const&
+    {
+        static_assert(is_copy_constructible<T>::value && is_convertible<U&&, T>::value,
+                      "T must be copy constructible and convertible from U");
+        return has_value() ? **this : static_cast<T>(forward<U>(v));
+    }
+
+    template <class U>
+    constexpr T value_or(U&& v) &&
+    {
+        static_assert(is_move_constructible<T>::value && is_convertible<U&&, T>::value,
+                      "T must be move constructible and convertible from U");
+        return has_value() ? move(**this) : static_cast<T>(forward<U>(v));
+    }
+
+    template <class G = E>
+    constexpr E error_or(G&& e) const&
+    {
+        static_assert(is_copy_constructible<E>::value && is_convertible<G&&, E>::value,
+                      "E must be copy constructible and convertible from G");
+        return has_value() ? static_cast<E>(forward<G>(e)) : error();
+    }
+
+    template <class G = E>
+    constexpr E error_or(G&& e) &&
+    {
+        static_assert(is_move_constructible<E>::value && is_convertible<G&&, E>::value,
+                      "E must be move constructible and convertible from G");
+        return has_value() ? static_cast<E>(forward<G>(e)) : move(error());
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) & -> typename detail::invoke_result<F, T&>::type
+    {
+        static_assert(detail::is_expected<typename detail::invoke_result<F, T&>::type>::value,
+                      "F must return expected");
+        return has_value() ? forward<F>(f)(**this)
+                           : typename detail::invoke_result<F, T&>::type(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) const& -> typename detail::invoke_result<F, const T&>::type
+    {
+        static_assert(detail::is_expected<typename detail::invoke_result<F, const T&>::type>::value,
+                      "F must return expected");
+        return has_value()
+                   ? forward<F>(f)(**this)
+                   : typename detail::invoke_result<F, const T&>::type(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) && -> typename detail::invoke_result<F, T&&>::type
+    {
+        static_assert(detail::is_expected<typename detail::invoke_result<F, T&&>::type>::value,
+                      "F must return expected");
+        return has_value()
+                   ? forward<F>(f)(move(**this))
+                   : typename detail::invoke_result<F, T&&>::type(unexpected<E>(move(error())));
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) const&& -> typename detail::invoke_result<F, const T&&>::type
+    {
+        static_assert(
+            detail::is_expected<typename detail::invoke_result<F, const T&&>::type>::value,
+            "F must return expected");
+        return has_value() ? forward<F>(f)(move(**this))
+                           : typename detail::invoke_result<F, const T&&>::type(
+                                 unexpected<E>(move(error())));
+    }
+
+    template <class F>
+    constexpr auto or_else(F&& f) & -> expected
+    {
+        static_assert(is_same<expected, typename detail::invoke_result<F, E&>::type>::value,
+                      "F must return expected<T, E>");
+        return has_value() ? *this : forward<F>(f)(error());
+    }
+
+    template <class F>
+    constexpr auto or_else(F&& f) const& -> expected
+    {
+        static_assert(is_same<expected, typename detail::invoke_result<F, const E&>::type>::value,
+                      "F must return expected<T, E>");
+        return has_value() ? *this : forward<F>(f)(error());
+    }
+
+    template <class F>
+    constexpr auto or_else(F&& f) && -> expected
+    {
+        static_assert(is_same<expected, typename detail::invoke_result<F, E&&>::type>::value,
+                      "F must return expected<T, E>");
+        return has_value() ? move(*this) : forward<F>(f)(move(error()));
+    }
+
+    template <class F>
+    constexpr auto or_else(F&& f) const&& -> expected
+    {
+        static_assert(is_same<expected, typename detail::invoke_result<F, const E&&>::type>::value,
+                      "F must return expected<T, E>");
+        return has_value() ? move(*this) : forward<F>(f)(move(error()));
     }
 };
 
