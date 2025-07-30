@@ -1110,6 +1110,78 @@ public:
                       "F must return expected<T, E>");
         return has_value() ? move(*this) : forward<F>(f)(move(error()));
     }
+
+    template <class F>
+    constexpr auto transform(F&& f) & -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const& -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) && -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value() ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                           : expected<typename detail::invoke_result<F>::type, E>(
+                                 unexpected<E>(move(error())));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const&& -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value() ? expected<typename detail::invoke_result<F>::type, E>(forward<F>(f)())
+                           : expected<typename detail::invoke_result<F>::type, E>(
+                                 unexpected<E>(move(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) & -> expected<void, typename detail::invoke_result<F, E&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, E&>::type>()
+                           : expected<void, typename detail::invoke_result<F, E&>::type>(
+                                 unexpected<typename detail::invoke_result<F, E&>::type>(
+                                     forward<F>(f)(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) const& -> expected<void, typename detail::invoke_result<F, const E&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, const E&>::type>()
+                           : expected<void, typename detail::invoke_result<F, const E&>::type>(
+                                 unexpected<typename detail::invoke_result<F, const E&>::type>(
+                                     forward<F>(f)(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) && -> expected<void, typename detail::invoke_result<F, E&&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, E&&>::type>()
+                           : expected<void, typename detail::invoke_result<F, E&&>::type>(
+                                 unexpected<typename detail::invoke_result<F, E&&>::type>(
+                                     forward<F>(f)(move(error()))));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) const&& -> expected<void, typename detail::invoke_result<F, const E&&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, const E&&>::type>()
+                           : expected<void, typename detail::invoke_result<F, const E&&>::type>(
+                                 unexpected<typename detail::invoke_result<F, const E&&>::type>(
+                                     forward<F>(f)(move(error()))));
+    }
 };
 
 }  // namespace std
