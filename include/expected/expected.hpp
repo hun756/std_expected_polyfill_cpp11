@@ -1599,6 +1599,106 @@ public:
             "F must return expected<void, E>");
         return has_value() ? std::move(*this) : std::forward<F>(f)(std::move(error()));
     }
+
+    template <class F>
+    constexpr auto transform(F&& f) & -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const& -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) && -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(
+                         unexpected<E>(std::move(error())));
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const&& -> expected<typename detail::invoke_result<F>::type, E>
+    {
+        return has_value()
+                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   : expected<typename detail::invoke_result<F>::type, E>(
+                         unexpected<E>(std::move(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) & -> expected<void, typename detail::invoke_result<F, E&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, E&>::type>()
+                           : expected<void, typename detail::invoke_result<F, E&>::type>(
+                                 unexpected<typename detail::invoke_result<F, E&>::type>(
+                                     std::forward<F>(f)(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) const& -> expected<void, typename detail::invoke_result<F, const E&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, const E&>::type>()
+                           : expected<void, typename detail::invoke_result<F, const E&>::type>(
+                                 unexpected<typename detail::invoke_result<F, const E&>::type>(
+                                     std::forward<F>(f)(error())));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) && -> expected<void, typename detail::invoke_result<F, E&&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, E&&>::type>()
+                           : expected<void, typename detail::invoke_result<F, E&&>::type>(
+                                 unexpected<typename detail::invoke_result<F, E&&>::type>(
+                                     std::forward<F>(f)(std::move(error()))));
+    }
+
+    template <class F>
+    constexpr auto transform_error(
+        F&& f) const&& -> expected<void, typename detail::invoke_result<F, const E&&>::type>
+    {
+        return has_value() ? expected<void, typename detail::invoke_result<F, const E&&>::type>()
+                           : expected<void, typename detail::invoke_result<F, const E&&>::type>(
+                                 unexpected<typename detail::invoke_result<F, const E&&>::type>(
+                                     std::forward<F>(f)(std::move(error()))));
+    }
+
+    template <class E2>
+    constexpr bool operator==(const expected<void, E2>& rhs) const
+    {
+        if (has_value() != rhs.has_value())
+            return false;
+        return has_value() || error() == rhs.error();
+    }
+
+    template <class E2>
+    constexpr bool operator!=(const expected<void, E2>& rhs) const
+    {
+        return !(*this == rhs);
+    }
+
+    template <class E2>
+    constexpr bool operator==(const unexpected<E2>& e) const
+    {
+        return !has_value() && error() == e.error();
+    }
+
+    template <class E2>
+    constexpr bool operator!=(const unexpected<E2>& e) const
+    {
+        return !(*this == e);
+    }
 };
 
 }  // namespace std_
