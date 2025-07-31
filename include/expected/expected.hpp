@@ -1701,6 +1701,72 @@ public:
     }
 };
 
+template <class T1, class E1, class T2, class E2>
+constexpr bool operator==(const expected<T1, E1>& lhs, const expected<T2, E2>& rhs)
+{
+    return lhs.operator==(rhs);
+}
+
+template <class T1, class E1, class T2, class E2>
+constexpr bool operator!=(const expected<T1, E1>& lhs, const expected<T2, E2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class T1, class E1, class T2>
+constexpr bool operator==(const expected<T1, E1>& lhs, const T2& rhs)
+{
+    return lhs.operator==(rhs);
+}
+
+template <class T1, class E1, class T2>
+constexpr bool operator==(const T1& lhs, const expected<T2, E1>& rhs)
+{
+    return rhs.operator==(lhs);
+}
+
+template <class T1, class E1, class T2>
+constexpr bool operator!=(const expected<T1, E1>& lhs, const T2& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class T1, class E1, class T2>
+constexpr bool operator!=(const T1& lhs, const expected<T2, E1>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class T1, class E1, class E2>
+constexpr bool operator==(const expected<T1, E1>& lhs, const unexpected<E2>& rhs)
+{
+    return lhs.operator==(rhs);
+}
+
+template <class T1, class E1, class E2>
+constexpr bool operator==(const unexpected<E1>& lhs, const expected<T1, E2>& rhs)
+{
+    return rhs.operator==(lhs);
+}
+
+template <class T1, class E1, class E2>
+constexpr bool operator!=(const expected<T1, E1>& lhs, const unexpected<E2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class T1, class E1, class E2>
+constexpr bool operator!=(const unexpected<E1>& lhs, const expected<T1, E2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template <class T, class E>
+constexpr void swap(expected<T, E>& lhs, expected<T, E>& rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+    lhs.swap(rhs);
+}
+
 }  // namespace std_
 
 #endif  // End of include guard: LIB_STD_EXPECTED_POLYFILL_CPP11_HPP_ztk3ue
