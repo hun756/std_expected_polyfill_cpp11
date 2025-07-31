@@ -1300,6 +1300,107 @@ public:
 
     constexpr expected(const expected&) = default;
     constexpr expected(expected&&) = default;
+
+    template <class U, class G>
+    constexpr expected(
+        const expected<U, G>& rhs,
+        typename std::enable_if<std::is_void<U>::value && std::is_constructible<E, const G&>::value
+                                && std::is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(rhs.has_value() ? base()
+                               : base(detail::in_place_type_t<unexpected_type>{}, rhs.error()))
+    {
+    }
+
+    template <class U, class G>
+    constexpr explicit expected(
+        const expected<U, G>& rhs,
+        typename std::enable_if<std::is_void<U>::value && std::is_constructible<E, const G&>::value
+                                && !std::is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(rhs.has_value() ? base()
+                               : base(detail::in_place_type_t<unexpected_type>{}, rhs.error()))
+    {
+    }
+
+    template <class U, class G>
+    constexpr expected(
+        expected<U, G>&& rhs,
+        typename std::enable_if<std::is_void<U>::value && std::is_constructible<E, G&&>::value
+                                && std::is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(rhs.has_value()
+                   ? base()
+                   : base(detail::in_place_type_t<unexpected_type>{}, std::move(rhs.error())))
+    {
+    }
+
+    template <class U, class G>
+    constexpr explicit expected(
+        expected<U, G>&& rhs,
+        typename std::enable_if<std::is_void<U>::value && std::is_constructible<E, G&&>::value
+                                && !std::is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(rhs.has_value()
+                   ? base()
+                   : base(detail::in_place_type_t<unexpected_type>{}, std::move(rhs.error())))
+    {
+    }
+
+    template <class G = E>
+    constexpr expected(
+        const unexpected<G>& e,
+        typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && std::is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, e.error())
+    {
+    }
+
+    template <class G = E>
+    constexpr explicit expected(
+        const unexpected<G>& e,
+        typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && !std::is_convertible<const G&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, e.error())
+    {
+    }
+
+    template <class G = E>
+    constexpr expected(
+        unexpected<G>&& e,
+        typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && std::is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
+    {
+    }
+
+    template <class G = E>
+    constexpr explicit expected(
+        unexpected<G>&& e,
+        typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && !std::is_convertible<G&&, E>::value>::type* = nullptr)
+        : base(detail::in_place_type_t<unexpected_type>{}, std::move(e.error()))
+    {
+    }
+
+    constexpr explicit expected(detail::in_place_t) noexcept : base() {}
+
+    template <class... Args>
+    constexpr explicit expected(detail::in_place_type_t<unexpected_type>, Args&&... args) noexcept(
+        std::is_nothrow_constructible<E, Args...>::value)
+        : base(detail::in_place_type_t<unexpected_type>{}, std::forward<Args>(args)...)
+    {
+    }
+
+    template <class U, class... Args>
+    constexpr explicit expected(
+        detail::in_place_type_t<unexpected_type>,
+        std::initializer_list<U> il,
+        Args&&... args) noexcept(std::is_nothrow_constructible<E,
+                                                               std::initializer_list<U>&,
+                                                               Args...>::value)
+        : base(detail::in_place_type_t<unexpected_type>{}, il, std::forward<Args>(args)...)
+    {
+    }
+
+    expected& operator=(const expected&) = default;
+    expected& operator=(expected&&) = default;
 };
 
 }  // namespace std_
