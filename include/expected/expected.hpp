@@ -1401,6 +1401,46 @@ public:
 
     expected& operator=(const expected&) = default;
     expected& operator=(expected&&) = default;
+
+    template <class G>
+    typename std::enable_if<std::is_constructible<E, const G&>::value
+                                && std::is_assignable<E&, const G&>::value
+                                && (std::is_nothrow_constructible<E, const G&>::value
+                                    || std::is_nothrow_move_constructible<E>::value),
+                            expected&>::type
+    operator=(const unexpected<G>& e)
+    {
+        if (has_value())
+        {
+            ::new (static_cast<void*>(std::addressof(this->err))) E(e.error());
+            this->has_val = false;
+        }
+        else
+        {
+            this->err = e.error();
+        }
+        return *this;
+    }
+
+    template <class G>
+    typename std::enable_if<std::is_constructible<E, G&&>::value
+                                && std::is_assignable<E&, G&&>::value
+                                && (std::is_nothrow_constructible<E, G&&>::value
+                                    || std::is_nothrow_move_constructible<E>::value),
+                            expected&>::type
+    operator=(unexpected<G>&& e)
+    {
+        if (has_value())
+        {
+            ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(e.error()));
+            this->has_val = false;
+        }
+        else
+        {
+            this->err = std::move(e.error());
+        }
+        return *this;
+    }
 };
 
 }  // namespace std_
