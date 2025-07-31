@@ -352,7 +352,8 @@ template <class T>
 struct is_nothrow_swappable
 {
     template <class U>
-    static auto test(int) -> decltype(std::swap(std::declval<U&>(), std::declval<U&>()), std::true_type{});
+    static auto test(int)
+        -> decltype(std::swap(std::declval<U&>(), std::declval<U&>()), std::true_type{});
     template <class>
     static std::false_type test(...);
 
@@ -425,7 +426,10 @@ public:
     static_assert(!std::is_reference<E>::value, "E must not be a reference");
     static_assert(!detail::is_unexpected<E>::value, "E must not be unexpected (no nesting)");
 
-    template <class Err = E>
+    template <
+        class Err = E,
+        typename std::enable_if<!std::is_same<typename std::decay<Err>::type, unexpected>::value,
+                                int>::type = 0>
     constexpr explicit unexpected(Err&& e) noexcept(std::is_nothrow_constructible<E, Err&&>::value)
         : val(std::forward<Err>(e))
     {
@@ -436,6 +440,30 @@ public:
         std::is_nothrow_constructible<E, Args...>::value)
         : val(std::forward<Args>(args)...)
     {
+    }
+
+    constexpr unexpected(const unexpected& other) noexcept(
+        std::is_nothrow_copy_constructible<E>::value)
+        : val(other.val)
+    {
+    }
+
+    constexpr unexpected(unexpected&& other) noexcept(std::is_nothrow_move_constructible<E>::value)
+        : val(std::move(other.val))
+    {
+    }
+
+    unexpected& operator=(const unexpected& other) noexcept(
+        std::is_nothrow_copy_assignable<E>::value)
+    {
+        val = other.val;
+        return *this;
+    }
+
+    unexpected& operator=(unexpected&& other) noexcept(std::is_nothrow_move_assignable<E>::value)
+    {
+        val = std::move(other.val);
+        return *this;
     }
 
     constexpr const E& error() const& noexcept
@@ -1078,9 +1106,9 @@ public:
     {
         static_assert(detail::is_expected<typename detail::invoke_result<F, T&&>::type>::value,
                       "F must return expected");
-        return has_value()
-                   ? std::forward<F>(f)(std::move(**this))
-                   : typename detail::invoke_result<F, T&&>::type(unexpected<E>(std::move(error())));
+        return has_value() ? std::forward<F>(f)(std::move(**this))
+                           : typename detail::invoke_result<F, T&&>::type(
+                                 unexpected<E>(std::move(error())));
     }
 
     template <class F>
@@ -1131,35 +1159,39 @@ public:
     template <class F>
     constexpr auto transform(F&& f) & -> expected<typename detail::invoke_result<F, T&>::type, E>
     {
-        return has_value()
-                   ? expected<typename detail::invoke_result<F, T&>::type, E>(std::forward<F>(f)(**this))
-                   : expected<typename detail::invoke_result<F, T&>::type, E>(unexpected<E>(error()));
+        return has_value() ? expected<typename detail::invoke_result<F, T&>::type, E>(
+                                 std::forward<F>(f)(**this))
+                           : expected<typename detail::invoke_result<F, T&>::type, E>(
+                                 unexpected<E>(error()));
     }
 
     template <class F>
-    constexpr auto transform(F&& f) const& -> expected<typename detail::invoke_result<F, const T&>::type, E>
+    constexpr auto transform(
+        F&& f) const& -> expected<typename detail::invoke_result<F, const T&>::type, E>
     {
-        return has_value()
-                   ? expected<typename detail::invoke_result<F, const T&>::type, E>(std::forward<F>(f)(**this))
-                   : expected<typename detail::invoke_result<F, const T&>::type, E>(unexpected<E>(error()));
+        return has_value() ? expected<typename detail::invoke_result<F, const T&>::type, E>(
+                                 std::forward<F>(f)(**this))
+                           : expected<typename detail::invoke_result<F, const T&>::type, E>(
+                                 unexpected<E>(error()));
     }
 
     template <class F>
     constexpr auto transform(F&& f) && -> expected<typename detail::invoke_result<F, T&&>::type, E>
     {
-        return has_value()
-                   ? expected<typename detail::invoke_result<F, T&&>::type, E>(std::forward<F>(f)(std::move(**this)))
-                   : expected<typename detail::invoke_result<F, T&&>::type, E>(
-                         unexpected<E>(std::move(error())));
+        return has_value() ? expected<typename detail::invoke_result<F, T&&>::type, E>(
+                                 std::forward<F>(f)(std::move(**this)))
+                           : expected<typename detail::invoke_result<F, T&&>::type, E>(
+                                 unexpected<E>(std::move(error())));
     }
 
     template <class F>
-    constexpr auto transform(F&& f) const&& -> expected<typename detail::invoke_result<F, const T&&>::type, E>
+    constexpr auto transform(
+        F&& f) const&& -> expected<typename detail::invoke_result<F, const T&&>::type, E>
     {
-        return has_value()
-                   ? expected<typename detail::invoke_result<F, const T&&>::type, E>(std::forward<F>(f)(std::move(**this)))
-                   : expected<typename detail::invoke_result<F, const T&&>::type, E>(
-                         unexpected<E>(std::move(error())));
+        return has_value() ? expected<typename detail::invoke_result<F, const T&&>::type, E>(
+                                 std::forward<F>(f)(std::move(**this)))
+                           : expected<typename detail::invoke_result<F, const T&&>::type, E>(
+                                 unexpected<E>(std::move(error())));
     }
 
     template <class F>
