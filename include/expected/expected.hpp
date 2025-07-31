@@ -1441,6 +1441,76 @@ public:
         }
         return *this;
     }
+
+    constexpr void emplace() noexcept
+    {
+        if (!has_value())
+        {
+            this->err.~E();
+            this->has_val = true;
+        }
+    }
+
+    constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible<E>::value
+                                                && detail::is_nothrow_swappable<E>::value)
+    {
+        if (has_value() && rhs.has_value())
+        {
+        }
+        else if (!has_value() && !rhs.has_value())
+        {
+            using std::swap;
+            swap(this->err, rhs.err);
+        }
+        else if (has_value() && !rhs.has_value())
+        {
+            ::new (static_cast<void*>(addressof(this->err))) E(move(rhs.err));
+            rhs.err.~E();
+            swap(this->has_val, rhs.has_val);
+        }
+        else
+        {
+            ::new (static_cast<void*>(addressof(rhs.err))) E(move(this->err));
+            this->err.~E();
+            swap(this->has_val, rhs.has_val);
+        }
+    }
+
+    constexpr explicit operator bool() const noexcept
+    {
+        return this->has_val;
+    }
+
+    constexpr bool has_value() const noexcept
+    {
+        return this->has_val;
+    }
+
+    constexpr void value() const
+    {
+        if (!has_value())
+            throw bad_expected_access<E>(error());
+    }
+
+    constexpr const E& error() const& noexcept
+    {
+        return this->err;
+    }
+
+    constexpr E& error() & noexcept
+    {
+        return this->err;
+    }
+
+    constexpr const E&& error() const&& noexcept
+    {
+        return move(this->err);
+    }
+
+    constexpr E&& error() && noexcept
+    {
+        return move(this->err);
+    }
 };
 
 }  // namespace std_
