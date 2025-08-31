@@ -222,10 +222,22 @@ struct expected_void_copy_base : expected_void_storage<E>
     using expected_void_storage<E>::expected_void_storage;
 
     expected_void_copy_base() = default;
-    expected_void_copy_base(const expected_void_copy_base&) = default;
     expected_void_copy_base(expected_void_copy_base&&) = default;
     expected_void_copy_base& operator=(const expected_void_copy_base&) = default;
     expected_void_copy_base& operator=(expected_void_copy_base&&) = default;
+
+    expected_void_copy_base(const expected_void_copy_base& rhs)
+    {
+        if (rhs.has_val)
+        {
+            this->has_val = true;
+        }
+        else
+        {
+            ::new (static_cast<void*>(std::addressof(this->err))) E(rhs.err);
+            this->has_val = false;
+        }
+    }
 
     template <bool Dummy = true,
               class = typename std::enable_if<Dummy && !std::is_copy_constructible<E>::value>::type>
@@ -257,9 +269,22 @@ struct expected_void_move_base : expected_void_copy_base<E>
 
     expected_void_move_base() = default;
     expected_void_move_base(const expected_void_move_base&) = default;
-    expected_void_move_base(expected_void_move_base&&) = default;
     expected_void_move_base& operator=(const expected_void_move_base&) = default;
     expected_void_move_base& operator=(expected_void_move_base&&) = default;
+
+    expected_void_move_base(expected_void_move_base&& rhs) noexcept(
+        std::is_nothrow_move_constructible<E>::value)
+    {
+        if (rhs.has_val)
+        {
+            this->has_val = true;
+        }
+        else
+        {
+            ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(rhs.err));
+            this->has_val = false;
+        }
+    }
 
     template <bool Dummy = true,
               class = typename std::enable_if<Dummy && !std::is_move_constructible<E>::value>::type>
@@ -294,8 +319,33 @@ struct expected_void_copy_assign_base : expected_void_move_base<E>
     expected_void_copy_assign_base() = default;
     expected_void_copy_assign_base(const expected_void_copy_assign_base&) = default;
     expected_void_copy_assign_base(expected_void_copy_assign_base&&) = default;
-    expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base&) = default;
     expected_void_copy_assign_base& operator=(expected_void_copy_assign_base&&) = default;
+
+    expected_void_copy_assign_base& operator=(const expected_void_copy_assign_base& rhs)
+    {
+        if (this->has_val && rhs.has_val)
+        {
+            // Both success - nothing to do
+        }
+        else if (!this->has_val && !rhs.has_val)
+        {
+            // Both error - assign error
+            this->err = rhs.err;
+        }
+        else if (this->has_val && !rhs.has_val)
+        {
+            // Success to error
+            ::new (static_cast<void*>(std::addressof(this->err))) E(rhs.err);
+            this->has_val = false;
+        }
+        else
+        {
+            // Error to success
+            this->err.~E();
+            this->has_val = true;
+        }
+        return *this;
+    }
 
     template <bool Dummy = true,
               class = typename std::enable_if<Dummy
@@ -333,7 +383,33 @@ struct expected_void_move_assign_base : expected_void_copy_assign_base<E>
     expected_void_move_assign_base(const expected_void_move_assign_base&) = default;
     expected_void_move_assign_base(expected_void_move_assign_base&&) = default;
     expected_void_move_assign_base& operator=(const expected_void_move_assign_base&) = default;
-    expected_void_move_assign_base& operator=(expected_void_move_assign_base&&) = default;
+
+    expected_void_move_assign_base& operator=(expected_void_move_assign_base&& rhs) noexcept(
+        std::is_nothrow_move_constructible<E>::value && std::is_nothrow_move_assignable<E>::value)
+    {
+        if (this->has_val && rhs.has_val)
+        {
+            // Both success - nothing to do
+        }
+        else if (!this->has_val && !rhs.has_val)
+        {
+            // Both error - move assign error
+            this->err = std::move(rhs.err);
+        }
+        else if (this->has_val && !rhs.has_val)
+        {
+            // Success to error
+            ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(rhs.err));
+            this->has_val = false;
+        }
+        else
+        {
+            // Error to success
+            this->err.~E();
+            this->has_val = true;
+        }
+        return *this;
+    }
 
     template <bool Dummy = true,
               class = typename std::enable_if<Dummy
@@ -1464,14 +1540,16 @@ public:
         }
         else if (has_value() && !rhs.has_value())
         {
-            ::new (static_cast<void*>(addressof(this->err))) E(move(rhs.err));
+            ::new (static_cast<void*>(std::addressof(this->err))) E(std::move(rhs.err));
             rhs.err.~E();
+            using std::swap;
             swap(this->has_val, rhs.has_val);
         }
         else
         {
-            ::new (static_cast<void*>(addressof(rhs.err))) E(move(this->err));
+            ::new (static_cast<void*>(std::addressof(rhs.err))) E(std::move(this->err));
             this->err.~E();
+            using std::swap;
             swap(this->has_val, rhs.has_val);
         }
     }
@@ -1504,12 +1582,12 @@ public:
 
     constexpr const E&& error() const&& noexcept
     {
-        return move(this->err);
+        return std::move(this->err);
     }
 
     constexpr E&& error() && noexcept
     {
-        return move(this->err);
+        return std::move(this->err);
     }
 
     template <class G = E>
@@ -1604,7 +1682,7 @@ public:
     constexpr auto transform(F&& f) & -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   ? (std::forward<F>(f)(), expected<typename detail::invoke_result<F>::type, E>())
                    : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
     }
 
@@ -1612,7 +1690,7 @@ public:
     constexpr auto transform(F&& f) const& -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   ? (std::forward<F>(f)(), expected<typename detail::invoke_result<F>::type, E>())
                    : expected<typename detail::invoke_result<F>::type, E>(unexpected<E>(error()));
     }
 
@@ -1620,7 +1698,7 @@ public:
     constexpr auto transform(F&& f) && -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   ? (std::forward<F>(f)(), expected<typename detail::invoke_result<F>::type, E>())
                    : expected<typename detail::invoke_result<F>::type, E>(
                          unexpected<E>(std::move(error())));
     }
@@ -1629,7 +1707,7 @@ public:
     constexpr auto transform(F&& f) const&& -> expected<typename detail::invoke_result<F>::type, E>
     {
         return has_value()
-                   ? expected<typename detail::invoke_result<F>::type, E>(std::forward<F>(f)())
+                   ? (std::forward<F>(f)(), expected<typename detail::invoke_result<F>::type, E>())
                    : expected<typename detail::invoke_result<F>::type, E>(
                          unexpected<E>(std::move(error())));
     }
