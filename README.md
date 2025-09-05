@@ -1,3 +1,78 @@
+# std_expected_polyfill_cpp11 — concise guide
+
+Practical, focused README for the C++11 `std::expected` polyfill in this repository. Short, human tone, no fluff.
+
+Where to look
+
+- Library: `include/expected/`
+- Examples: `examples/`
+- Benchmarks: `bench/`
+- Tests: `test/`
+
+Features (short)
+| Feature | Location | What it does |
+|---|---:|---|
+| expected / unexpected | `include/expected/` | value or error container |
+| Monadic ops (and_then/transform/or_else) | examples, test | chain operations; short-circuit on error |
+| value_or / error handling | examples, bench | convenient fallback for errors |
+| Move-only / large payloads | bench/bench_edge_cases.cpp | shows costs for move and large copies |
+
+Minimal code examples
+
+1. Construct and fallback
+
+```cpp
+#include <expected/expected.hpp>
+// ...
+std_::expected<int, std::string> f() { return 42; }
+auto e = f();
+int v = e.value_or(-1);
+```
+
+2. Chain operations
+
+```cpp
+std_::expected<int,std::string> add_one(int x){ return x+1; }
+auto r = std_::expected<int,std::string>(1).and_then(add_one).and_then(add_one);
+// r contains value or error
+```
+
+3. Move-only payload
+
+```cpp
+struct MoveOnly { std::unique_ptr<int> p; MoveOnly(int v):p(new int(v)){} };
+std_::expected<MoveOnly,std::string> e = MoveOnly(42);
+```
+
+Build & run (PowerShell)
+
+Note: for meaningful benchmark numbers use Release.
+
+```powershell
+# Configure Release and build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j 0
+
+# Run example (adjust name as needed)
+build\bin\example1.exe
+
+# Run a single benchmark
+build\bin\bench_monadic_chain.exe
+
+# Run tests
+cmake --build build --target test --config Release
+ctest --test-dir build --output-on-failure
+```
+
+Notes
+
+- This README is intentionally short. For API details, read headers under `include/expected/`.
+- Benchmarks live in `bench/` and compare common patterns (value_or vs exceptions, monadic chains, move-only costs).
+
+License
+
+- See `LICENSE` in the project root.
+
 # 📦 Modern C++ Project Template
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -95,20 +170,18 @@ my-project/
 
 ## 🔧 Build Options
 
-
-| Option               | Default | Description                             |
-|----------------------|---------|-----------------------------------------|
-| BUILD_SHARED_LIBS    | OFF     | Build shared libraries                  |
-| BUILD_EXAMPLES       | ON      | Build example programs                  |
-| BUILD_TESTS          | ON      | Build tests                             |
-| BUILD_BENCHMARKS     | ON      | Build benchmark programs                |
-| ENABLE_COVERAGE      | OFF     | Enable coverage reporting              |
-| ENABLE_SANITIZERS    | OFF     | Enable sanitizers in debug builds       |
-| ENABLE_PCH           | OFF     | Enable precompiled headers              |
-| ENABLE_LTO           | OFF     | Enable Link Time Optimization           |
-| ENABLE_CPPCHECK      | OFF     | Enable static analysis with cppcheck    |
-| ENABLE_CLANG_TIDY    | OFF     | Enable static analysis with clang-tidy  |
-
+| Option            | Default | Description                            |
+| ----------------- | ------- | -------------------------------------- |
+| BUILD_SHARED_LIBS | OFF     | Build shared libraries                 |
+| BUILD_EXAMPLES    | ON      | Build example programs                 |
+| BUILD_TESTS       | ON      | Build tests                            |
+| BUILD_BENCHMARKS  | ON      | Build benchmark programs               |
+| ENABLE_COVERAGE   | OFF     | Enable coverage reporting              |
+| ENABLE_SANITIZERS | OFF     | Enable sanitizers in debug builds      |
+| ENABLE_PCH        | OFF     | Enable precompiled headers             |
+| ENABLE_LTO        | OFF     | Enable Link Time Optimization          |
+| ENABLE_CPPCHECK   | OFF     | Enable static analysis with cppcheck   |
+| ENABLE_CLANG_TIDY | OFF     | Enable static analysis with clang-tidy |
 
 Example usage:
 
@@ -119,11 +192,13 @@ cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_SANITIZERS=ON
 ## 📚 Documentation
 
 Generate documentation with Doxygen:
+
 ```bash
 cmake --build . --target docs
 ```
 
 Create distributable packages:
+
 ```bash
 cmake --build . --target package
 ```
